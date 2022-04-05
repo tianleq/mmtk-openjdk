@@ -181,6 +181,7 @@ pub struct ObjectsClosure<'a, E: ProcessEdgesWork<VM = OpenJDK>>(
     Vec<Address>,
     &'a mut GCWorker<OpenJDK>,
     PhantomData<E>,
+    i32,
 );
 
 impl<'a, E: ProcessEdgesWork<VM = OpenJDK>> TransitiveClosure for ObjectsClosure<'a, E> {
@@ -195,7 +196,7 @@ impl<'a, E: ProcessEdgesWork<VM = OpenJDK>> TransitiveClosure for ObjectsClosure
             mem::swap(&mut new_edges, &mut self.0);
             self.1.add_work(
                 WorkBucketStage::Closure,
-                E::new(new_edges, false, &SINGLETON),
+                E::new(self.3, new_edges, false, &SINGLETON),
             );
         }
     }
@@ -211,16 +212,17 @@ impl<'a, E: ProcessEdgesWork<VM = OpenJDK>> Drop for ObjectsClosure<'a, E> {
         mem::swap(&mut new_edges, &mut self.0);
         self.1.add_work(
             WorkBucketStage::Closure,
-            E::new(new_edges, false, &SINGLETON),
+            E::new(self.3, new_edges, false, &SINGLETON),
         );
     }
 }
 
 pub fn scan_objects_and_create_edges_work<E: ProcessEdgesWork<VM = OpenJDK>>(
+    depth: i32,
     objects: &[ObjectReference],
     worker: &mut GCWorker<OpenJDK>,
 ) {
-    let mut closure = ObjectsClosure::<E>(Vec::new(), worker, PhantomData);
+    let mut closure = ObjectsClosure::<E>(Vec::new(), worker, PhantomData, depth);
     for object in objects {
         scan_object(
             *object,

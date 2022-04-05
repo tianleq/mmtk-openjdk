@@ -22,7 +22,7 @@ pub(crate) extern "C" fn create_process_edges_work<W: ProcessEdgesWork<VM = Open
         memory_manager::add_work_packet(
             &SINGLETON,
             WorkBucketStage::Closure,
-            W::new(buf, true, &SINGLETON),
+            W::new(0, buf, true, &SINGLETON),
         );
     }
     let (ptr, _, capacity) = {
@@ -53,10 +53,11 @@ impl Scanning<OpenJDK> for VMScanning {
     }
 
     fn scan_objects<W: ProcessEdgesWork<VM = OpenJDK>>(
+        depth: i32,
         objects: &[ObjectReference],
         worker: &mut GCWorker<OpenJDK>,
     ) {
-        crate::object_scanning::scan_objects_and_create_edges_work::<W>(objects, worker);
+        crate::object_scanning::scan_objects_and_create_edges_work::<W>(depth, objects, worker);
     }
 
     fn scan_thread_roots<W: ProcessEdgesWork<VM = OpenJDK>>() {
