@@ -319,6 +319,33 @@ static void mmtk_prepare_for_roots_re_scanning() {
 #endif
 }
 
+static size_t mmtk_thread_stack_depth(void *tls) {
+  JavaThread *jt = (JavaThread *)tls;
+  size_t depth = 0;
+  if (jt->has_last_Java_frame()) {
+    for (StackFrameStream fst(jt, false); !fst.is_done(); fst.next()) {
+      ++depth;
+    }
+  }
+  return depth;
+}
+
+static size_t mmtk_thread_stack_size(void *tls) {
+  JavaThread *jt = (JavaThread *)tls;
+  intptr_t* sp = 0;
+  intptr_t* fp = 0;
+  size_t size = 0;
+  if (jt->has_last_Java_frame()) {
+    for (StackFrameStream fst(jt, false); !fst.is_done(); fst.next()) {
+      sp = fst.current()->sp();
+      fp = fst.current()->real_fp();
+      assert(sp < fp, "corrupted stack frame");
+      size += (fp - sp);
+    }
+  }
+  return size;
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -360,4 +387,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_number_of_mutators,
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
+  mmtk_thread_stack_depth,
+  mmtk_thread_stack_size,
 };
