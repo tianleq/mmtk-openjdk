@@ -140,4 +140,20 @@ public:
 //   }
 // };
 
+class MMTKThreadRootCountClosure : public OopClosure {
+  size_t _root_count;
+
+  template <class T>
+  void do_oop_work(T* p) {
+    _root_count++;
+  }
+
+public:
+  MMTKThreadRootCountClosure(): _root_count(0) {}
+
+  virtual void do_oop(oop* p)       { do_oop_work(p); }
+  virtual void do_oop(narrowOop* p) { do_oop_work(p); }
+  size_t root_count() {return _root_count; }
+};
+
 #endif // MMTK_OPENJDK_MMTK_ROOTS_CLOSURE_HPP

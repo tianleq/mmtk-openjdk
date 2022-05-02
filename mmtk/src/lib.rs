@@ -79,6 +79,7 @@ pub struct OpenJDK_Upcalls {
     pub prepare_for_roots_re_scanning: extern "C" fn(),
     pub thread_stack_depth: extern "C" fn(tls: VMMutatorThread) -> usize,
     pub thread_stack_size: extern "C" fn(tls: VMMutatorThread) -> usize,
+    pub thread_root_count: extern "C" fn(tls: VMMutatorThread) -> usize,
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();

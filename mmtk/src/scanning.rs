@@ -149,4 +149,9 @@ impl Scanning<OpenJDK> for VMScanning {
         let tls = mutator.get_tls();
         unsafe { ((*UPCALLS).thread_stack_size)(tls) }
     }
+
+    fn thread_root_count(mutator: &'static Mutator<OpenJDK>) -> usize {
+        let tls = mutator.get_tls();
+        unsafe { ((*UPCALLS).thread_root_count)(tls) }
+    }
 }

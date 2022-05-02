@@ -346,6 +346,13 @@ static size_t mmtk_thread_stack_size(void *tls) {
   return size;
 }
 
+static size_t mmtk_thread_root_count(void *tls) {
+  JavaThread *thread = (JavaThread *)tls;
+  MMTKThreadRootCountClosure closure;
+  thread->oops_do(&closure, NULL);
+  return closure.root_count();
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -389,4 +396,5 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_prepare_for_roots_re_scanning,
   mmtk_thread_stack_depth,
   mmtk_thread_stack_size,
+  mmtk_thread_root_count,
 };
