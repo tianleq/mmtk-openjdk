@@ -35,31 +35,6 @@ pub(crate) extern "C" fn create_process_edges_work<W: ProcessEdgesWork<VM = Open
     NewBuffer { ptr, capacity }
 }
 
-pub(crate) extern "C" fn create_process_edges_work_non_stack_roots<
-    W: ProcessEdgesWork<VM = OpenJDK>,
->(
-    ptr: *mut Address,
-    length: usize,
-    capacity: usize,
-) -> NewBuffer {
-    if !ptr.is_null() {
-        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
-        memory_manager::add_work_packet(
-            &SINGLETON,
-            WorkBucketStage::Closure,
-            W::new(0, buf, false, &SINGLETON),
-        );
-    }
-    let (ptr, _, capacity) = {
-        // TODO: Use Vec::into_raw_parts() when the method is available.
-        use std::mem::ManuallyDrop;
-        let new_vec = Vec::with_capacity(W::CAPACITY);
-        let mut me = ManuallyDrop::new(new_vec);
-        (me.as_mut_ptr(), me.len(), me.capacity())
-    };
-    NewBuffer { ptr, capacity }
-}
-
 impl Scanning<OpenJDK> for VMScanning {
     const SCAN_MUTATORS_IN_SAFEPOINT: bool = false;
     const SINGLE_THREAD_MUTATOR_SCANNING: bool = false;

@@ -1,5 +1,5 @@
 use super::{OpenJDK, UPCALLS};
-use crate::scanning::create_process_edges_work_non_stack_roots;
+use crate::scanning::create_process_edges_work;
 use mmtk::scheduler::*;
 use mmtk::MMTK;
 use std::marker::PhantomData;
@@ -15,7 +15,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanUniverseRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanUniverseRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_universe_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_universe_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -31,7 +31,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanJNIHandlesRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanJNIHandlesRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_jni_handle_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_jni_handle_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -47,9 +47,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanObjectSynchronizerRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanObjectSynchronizerRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_object_synchronizer_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_object_synchronizer_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -65,7 +63,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanManagementRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanManagementRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_management_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_management_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -81,9 +79,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanJvmtiExportRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanJvmtiExportRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_jvmti_export_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_jvmti_export_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -99,7 +95,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanAOTLoaderRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanAOTLoaderRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_aot_loader_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_aot_loader_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -115,9 +111,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanSystemDictionaryRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanSystemDictionaryRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_system_dictionary_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_system_dictionary_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -133,7 +127,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanCodeCacheRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanCodeCacheRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_code_cache_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_code_cache_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -149,9 +143,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanStringTableRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanStringTableRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_string_table_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_string_table_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -167,9 +159,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanClassLoaderDataGraphRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanClassLoaderDataGraphRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_class_loader_data_graph_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_class_loader_data_graph_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -185,9 +175,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanWeakProcessorRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanWeakProcessorRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_weak_processor_roots)(
-                create_process_edges_work_non_stack_roots::<E> as _,
-            );
+            ((*UPCALLS).scan_weak_processor_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
@@ -203,7 +191,7 @@ impl<E: ProcessEdgesWork<VM = OpenJDK>> ScanVMThreadRoots<E> {
 impl<E: ProcessEdgesWork<VM = OpenJDK>> GCWork<OpenJDK> for ScanVMThreadRoots<E> {
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         unsafe {
-            ((*UPCALLS).scan_vm_thread_roots)(create_process_edges_work_non_stack_roots::<E> as _);
+            ((*UPCALLS).scan_vm_thread_roots)(create_process_edges_work::<E> as _);
         }
     }
 }
