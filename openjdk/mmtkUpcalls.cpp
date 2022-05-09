@@ -355,6 +355,22 @@ static size_t mmtk_thread_root_count(void *tls) {
   return count;
 }
 
+static void mmtk_harness_begin(size_t thread_id) {
+  assert(Thread::current()->is_Java_thread(), "Only Java thread can call harness_begin");
+
+  JavaThread* current = ((JavaThread*) Thread::current());
+  ThreadInVMfromNative tiv(current);
+  harness_begin_impl(thread_id);
+}
+
+static void mmtk_harness_end(size_t thread_id) {
+  assert(Thread::current()->is_Java_thread(), "Only Java thread can call harness_end");
+
+  JavaThread* current = ((JavaThread*) Thread::current());
+  ThreadInVMfromNative tiv(current);
+  harness_end_impl(thread_id);
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -399,4 +415,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_thread_stack_depth,
   mmtk_thread_stack_size,
   mmtk_thread_root_count,
+  mmtk_harness_begin,
+  mmtk_harness_end,
 };

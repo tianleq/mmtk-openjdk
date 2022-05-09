@@ -80,6 +80,8 @@ pub struct OpenJDK_Upcalls {
     pub thread_stack_depth: extern "C" fn(tls: VMMutatorThread) -> usize,
     pub thread_stack_size: extern "C" fn(tls: VMMutatorThread) -> usize,
     pub thread_root_count: extern "C" fn(tls: VMMutatorThread) -> usize,
+    pub harness_begin: extern "C" fn(thread_id: usize),
+    pub harness_end: extern "C" fn(thread_id: usize),
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();

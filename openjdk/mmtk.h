@@ -147,6 +147,8 @@ typedef struct {
     size_t (*thread_stack_depth)(void *tls);
     size_t (*thread_stack_size)(void *tls);
     size_t (*thread_root_count)(void *tls);
+    void (*harness_begin)(size_t thread_id);
+    void (*harness_end)(size_t thread_id);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls, size_t heap_size);
@@ -171,8 +173,8 @@ extern void add_weak_candidate(void* ref, void* referent);
 extern void add_soft_candidate(void* ref, void* referent);
 extern void add_phantom_candidate(void* ref, void* referent);
 
-extern void harness_begin(void *tls);
-extern void harness_end();
+extern void harness_begin_impl(size_t thread_id);
+extern void harness_end_impl(size_t thread_id);
 
 #ifdef __cplusplus
 }
