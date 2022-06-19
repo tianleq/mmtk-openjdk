@@ -221,6 +221,20 @@ pub extern "C" fn mmtk_harness_end_impl() {
 }
 
 #[no_mangle]
+pub extern "C" fn mmtk_critical_section_start(jni_env: *const libc::c_void) {
+    println!("start critical section");
+    unsafe { ((*UPCALLS).critical_section_start)(jni_env) };
+    memory_manager::critical_section_start(&SINGLETON);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_critical_section_finish(jni_env: *const libc::c_void) {
+    memory_manager::critical_section_finish(&SINGLETON);
+    unsafe { ((*UPCALLS).critical_section_finish)(jni_env) };
+    println!("finish critical section");
+}
+
+#[no_mangle]
 // We trust the name/value pointer is valid.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn process(name: *const c_char, value: *const c_char) -> bool {

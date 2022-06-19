@@ -89,6 +89,8 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+  bool critical_section_active;
+  size_t critical_section_counter;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

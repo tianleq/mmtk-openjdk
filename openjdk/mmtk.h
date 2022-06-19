@@ -145,6 +145,9 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    void (*mmtk_critical_section_start)(void *jni_env);
+    void (*mmtk_critical_section_finish)(void *jni_env);
+    size_t (*mmtk_mutator_thread_id)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls, size_t heap_size);
@@ -171,6 +174,7 @@ extern void add_phantom_candidate(void* ref, void* referent);
 
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
+
 
 #ifdef __cplusplus
 }
