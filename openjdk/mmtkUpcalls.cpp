@@ -344,12 +344,18 @@ static void mmtk_critical_section_start(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   mutator->critical_section_active = true;
+  ++mutator->critical_section_counter;
 }
 
 static void mmtk_critical_section_finish(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   mutator->critical_section_active = false;
+}
+
+static size_t mmtk_mutator_id(void *tls) {
+  Thread *thread = (Thread *) tls;
+  return thread->osthread()->thread_id();
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -396,4 +402,5 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_enqueue_references,
   mmtk_critical_section_start,
   mmtk_critical_section_finish,
+  mmtk_mutator_id,
 };

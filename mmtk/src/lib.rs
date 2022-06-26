@@ -80,6 +80,7 @@ pub struct OpenJDK_Upcalls {
     pub enqueue_references: extern "C" fn(objects: *const ObjectReference, len: usize),
     pub critical_section_start: extern "C" fn(jni_env: *const c_void),
     pub critical_section_finish: extern "C" fn(jni_env: *const c_void),
+    pub mmtk_mutator_id: extern "C" fn(tls: VMMutatorThread) -> usize,
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();

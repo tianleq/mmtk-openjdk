@@ -22,11 +22,15 @@ static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarr
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
 
+static OBJECT_LOGGING_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("ObjectLoggingBarrier").unwrap());
+
 #[no_mangle]
 pub extern "C" fn mmtk_active_barrier() -> *const c_char {
     match SINGLETON.get_plan().constraints().barrier {
         BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
         BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+        BarrierSelector::ObjectLoggingBarrier => OBJECT_LOGGING_BARRIER.as_ptr(),
         // In case we have more barriers in mmtk-core.
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
@@ -281,6 +285,15 @@ pub extern "C" fn record_modified_node(
     obj: ObjectReference,
 ) {
     mutator.record_modified_node(obj);
+}
+
+#[no_mangle]
+pub extern "C" fn record_non_local_object(
+    mutator: &'static mut Mutator<OpenJDK>,
+    obj: ObjectReference,
+    new_val;: ObjectReference,
+) {
+    mutator.record_non_local_object(obj, new_val);
 }
 
 // finalization

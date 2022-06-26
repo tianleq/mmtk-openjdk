@@ -44,6 +44,7 @@ extern void post_alloc(MMTk_Mutator mutator, void* refer,
     int bytes, int allocator);
 
 extern void record_modified_node(MMTk_Mutator mutator, void* obj);
+extern void record_non_local_object(MMTk_Mutator mutator, void* obj, void *new_val);
 
 extern void release_buffer(void** buffer, size_t len, size_t cap);
 
@@ -147,7 +148,7 @@ typedef struct {
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_critical_section_start)(void *jni_env);
     void (*mmtk_critical_section_finish)(void *jni_env);
-    size_t (*mmtk_mutator_thread_id)(void *tls);
+    size_t (*mmtk_mutator_id)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls, size_t heap_size);
