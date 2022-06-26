@@ -6,7 +6,7 @@ void MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow(void* obj, void
   ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, new_val);
 }
 
-void MMTkObjectOwnerBarrierSetRuntime::record_modified_node(oop src, oop new_val) {
+void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_val) {
 #if MMTK_ENABLE_OBJECT_BARRIER_FASTPATH
   intptr_t addr = (intptr_t) (void*) src;
   uint8_t* meta_addr = (uint8_t*) (SIDE_METADATA_BASE_ADDRESS + (addr >> 6));

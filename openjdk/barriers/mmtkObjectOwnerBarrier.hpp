@@ -28,7 +28,8 @@ public:
     return call == CAST_FROM_FN_PTR(address, record_modified_node_slow);
   }
 
-  virtual void record_modified_node(oop src, oop new_val);
+  virtual void record_modified_node(oop src);
+  virtual void record_non_local_object(oop src, oop new_val)
 };
 
 class MMTkObjectOwnerBarrierSetC1;
