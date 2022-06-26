@@ -119,17 +119,17 @@ public:
 public:
   CodeBlob* _write_barrier_c1_runtime_code_blob;
   virtual void store_at_resolved(LIRAccess& access, LIR_Opr value) {
-    BarrierSetC1::store_at_resolved(access, value);
     if (access.is_oop()) record_modified_node(access, access.base().opr(), access.resolved_addr(), value);
+    BarrierSetC1::store_at_resolved(access, value);
   }
   virtual LIR_Opr atomic_cmpxchg_at_resolved(LIRAccess& access, LIRItem& cmp_value, LIRItem& new_value) {
-    LIR_Opr result = BarrierSetC1::atomic_cmpxchg_at_resolved(access, cmp_value, new_value);
     if (access.is_oop()) record_modified_node(access, access.base().opr(), access.resolved_addr(), new_value.result());
+    LIR_Opr result = BarrierSetC1::atomic_cmpxchg_at_resolved(access, cmp_value, new_value);
     return result;
   }
   virtual LIR_Opr atomic_xchg_at_resolved(LIRAccess& access, LIRItem& value) {
-    LIR_Opr result = BarrierSetC1::atomic_xchg_at_resolved(access, value);
     if (access.is_oop()) record_modified_node(access, access.base().opr(), access.resolved_addr(), value.result());
+    LIR_Opr result = BarrierSetC1::atomic_xchg_at_resolved(access, value);
     return result;
   }
   virtual void generate_c1_runtime_stubs(BufferBlob* buffer_blob) {
@@ -156,13 +156,13 @@ class MMTkObjectOwnerBarrierSetC2: public MMTkBarrierSetC2 {
   void record_modified_node(GraphKit* kit, Node* node, Node* val) const;
 public:
   virtual Node* store_at_resolved(C2Access& access, C2AccessValue& val) const {
-    Node* store = BarrierSetC2::store_at_resolved(access, val);
     if (access.is_oop()) record_modified_node(access.kit(), access.base(), val.node());
+    Node* store = BarrierSetC2::store_at_resolved(access, val);
     return store;
   }
   virtual Node* atomic_cmpxchg_val_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
-    Node* result = BarrierSetC2::atomic_cmpxchg_val_at_resolved(access, expected_val, new_val, value_type);
     if (access.is_oop()) record_modified_node(access.kit(), access.base(), new_val);
+    Node* result = BarrierSetC2::atomic_cmpxchg_val_at_resolved(access, expected_val, new_val, value_type);
     return result;
   }
   virtual Node* atomic_cmpxchg_bool_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
@@ -171,13 +171,13 @@ public:
     return load_store;
   }
   virtual Node* atomic_xchg_at_resolved(C2AtomicAccess& access, Node* new_val, const Type* value_type) const {
-    Node* result = BarrierSetC2::atomic_xchg_at_resolved(access, new_val, value_type);
     if (access.is_oop()) record_modified_node(access.kit(), access.base(), new_val);
+    Node* result = BarrierSetC2::atomic_xchg_at_resolved(access, new_val, value_type);
     return result;
   }
   virtual void clone(GraphKit* kit, Node* src, Node* dst, Node* size, bool is_array) const {
-    BarrierSetC2::clone(kit, src, dst, size, is_array);
     record_modified_node(kit, dst, NULL);
+    BarrierSetC2::clone(kit, src, dst, size, is_array);
   }
   virtual bool is_gc_barrier_node(Node* node) const {
     if (node->Opcode() != Op_CallLeaf) return false;
@@ -193,6 +193,7 @@ inline void MMTkObjectOwnerBarrierSetAssembler::gen_write_barrier_stub(LIR_Assem
   MMTkObjectOwnerBarrierSetC1* bs = (MMTkObjectOwnerBarrierSetC1*) BarrierSet::barrier_set()->barrier_set_c1();
   __ bind(*stub->entry());
   ce->store_parameter(stub->_src->as_pointer_register(), 0);
+  ce->store_parameter(stub->_new_val->as_pointer_register(), 1);
   __ call(RuntimeAddress(bs->_write_barrier_c1_runtime_code_blob->code_begin()));
   __ jmp(*stub->continuation());
 }
