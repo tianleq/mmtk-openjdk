@@ -90,7 +90,10 @@ struct MMTkMutatorContext {
   RustDynPtr plan;
   MutatorConfig config;
   bool critical_section_active;
-  size_t critical_section_counter;
+  unsigned request_id;
+  unsigned cirtical_section_object_counter;
+  size_t critical_section_memory_footprint;
+
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

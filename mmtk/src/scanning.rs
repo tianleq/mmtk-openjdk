@@ -22,7 +22,7 @@ pub(crate) extern "C" fn create_process_edges_work<W: ProcessEdgesWork<VM = Open
         memory_manager::add_work_packet(
             &SINGLETON,
             WorkBucketStage::Closure,
-            W::new(buf, true, &SINGLETON),
+            W::new(vec![], buf, true, &SINGLETON),
         );
     }
     let (ptr, _, capacity) = {

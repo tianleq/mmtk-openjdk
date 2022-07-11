@@ -18,8 +18,6 @@
 #define LOG_BYTES_IN_CHUNK 22
 #define CHUNK_MASK ((1L << LOG_BYTES_IN_CHUNK) - 1)
 
-const intptr_t SIDE_METADATA_BASE_ADDRESS = (intptr_t) GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
-
 class MMTkObjectOwnerBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
   static void record_modified_node_slow(void* src, void *new_val);
@@ -28,8 +26,8 @@ public:
     return call == CAST_FROM_FN_PTR(address, record_modified_node_slow);
   }
 
-  virtual void record_modified_node(oop src);
-  virtual void record_non_local_object(oop src, oop new_val)
+  // virtual void record_modified_node(oop src);
+  virtual void record_non_local_object(oop src, oop new_val);
 };
 
 class MMTkObjectOwnerBarrierSetC1;

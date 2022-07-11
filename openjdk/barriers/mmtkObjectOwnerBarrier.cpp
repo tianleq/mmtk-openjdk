@@ -160,14 +160,14 @@ void MMTkObjectOwnerBarrierSetC1::record_modified_node(LIRAccess& access, LIR_Op
 
 #define __ ideal.
 
-const TypeFunc* record_modified_node_entry_Type() {
-  const Type **fields = TypeTuple::fields(1);
-  fields[TypeFunc::Parms+0] = TypeOopPtr::BOTTOM; // oop src
-  const TypeTuple *domain = TypeTuple::make(TypeFunc::Parms+1, fields);
-  fields = TypeTuple::fields(0);
-  const TypeTuple *range = TypeTuple::make(TypeFunc::Parms+0, fields);
-  return TypeFunc::make(domain, range);
-}
+// const TypeFunc* record_modified_node_entry_Type() {
+//   const Type **fields = TypeTuple::fields(1);
+//   fields[TypeFunc::Parms+0] = TypeOopPtr::BOTTOM; // oop src
+//   const TypeTuple *domain = TypeTuple::make(TypeFunc::Parms+1, fields);
+//   fields = TypeTuple::fields(0);
+//   const TypeTuple *range = TypeTuple::make(TypeFunc::Parms+0, fields);
+//   return TypeFunc::make(domain, range);
+// }
 
 void MMTkObjectOwnerBarrierSetC2::record_modified_node(GraphKit* kit, Node* src, Node* val) const {
   if (val != NULL && val->is_Con()) {

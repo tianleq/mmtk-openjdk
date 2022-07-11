@@ -343,14 +343,20 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
 static void mmtk_critical_section_start(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->critical_section_active == false, "invalid critical section state (active --> active)");
   mutator->critical_section_active = true;
-  ++mutator->critical_section_counter;
+  ++mutator->request_id;
 }
 
 static void mmtk_critical_section_finish(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->critical_section_active == true, "invalid critical section state (false --> false)");
   mutator->critical_section_active = false;
+  assert(Thread::current()->is_Java_thread(), "Only Java thread can enter vm");
+  JavaThread* current = ((JavaThread*) Thread::current());
+  ThreadInVMfromNative tiv(current);
+  mmtk_do_explicit_gc(thread);
 }
 
 static size_t mmtk_mutator_id(void *tls) {

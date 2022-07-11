@@ -226,16 +226,34 @@ pub extern "C" fn mmtk_harness_end_impl() {
 
 #[no_mangle]
 pub extern "C" fn mmtk_critical_section_start(jni_env: *const libc::c_void) {
-    println!("start critical section");
+    // println!("start critical section");
     unsafe { ((*UPCALLS).critical_section_start)(jni_env) };
     memory_manager::critical_section_start(&SINGLETON);
+    SINGLETON
+        .get_plan()
+        .base()
+        .stress_enabled
+        .store(true, std::sync::atomic::Ordering::SeqCst);
 }
 
 #[no_mangle]
 pub extern "C" fn mmtk_critical_section_finish(jni_env: *const libc::c_void) {
     memory_manager::critical_section_finish(&SINGLETON);
     unsafe { ((*UPCALLS).critical_section_finish)(jni_env) };
-    println!("finish critical section");
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
+    SINGLETON
+        .get_plan()
+        .base()
+        .mutators
+        .lock()
+        .unwrap()
+        .push(tls);
+    SINGLETON
+        .get_plan()
+        .handle_user_collection_request(tls, true);
 }
 
 #[no_mangle]
@@ -291,7 +309,7 @@ pub extern "C" fn record_modified_node(
 pub extern "C" fn record_non_local_object(
     mutator: &'static mut Mutator<OpenJDK>,
     obj: ObjectReference,
-    new_val;: ObjectReference,
+    new_val: ObjectReference,
 ) {
     mutator.record_non_local_object(obj, new_val);
 }
