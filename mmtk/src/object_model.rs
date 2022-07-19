@@ -157,4 +157,12 @@ impl ObjectModel<OpenJDK> for VMObjectModel {
             ((*UPCALLS).dump_object)(object);
         }
     }
+
+    fn dump_object_string(object: ObjectReference) -> &'static std::ffi::CStr {
+        unsafe {
+            let oop: Oop = std::mem::transmute(object);
+            let c_string = ((*UPCALLS).dump_object_string)(std::mem::transmute(oop));
+            std::ffi::CStr::from_ptr(c_string)
+        }
+    }
 }

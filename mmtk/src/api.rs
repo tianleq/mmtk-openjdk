@@ -228,7 +228,22 @@ pub extern "C" fn mmtk_harness_end_impl() {
 pub extern "C" fn mmtk_critical_section_start(jni_env: *const libc::c_void) {
     // println!("start critical section");
     unsafe { ((*UPCALLS).critical_section_start)(jni_env) };
-    memory_manager::critical_section_start(&SINGLETON);
+    // memory_manager::critical_section_start(&SINGLETON);
+    // SINGLETON
+    //     .get_plan()
+    //     .base()
+    //     .stress_enabled
+    //     .store(true, std::sync::atomic::Ordering::SeqCst);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_critical_section_finish(jni_env: *const libc::c_void) {
+    // memory_manager::critical_section_finish(&SINGLETON);
+    unsafe { ((*UPCALLS).critical_section_finish)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_enable_stress(jni_env: *const libc::c_void) {
     SINGLETON
         .get_plan()
         .base()
@@ -237,13 +252,10 @@ pub extern "C" fn mmtk_critical_section_start(jni_env: *const libc::c_void) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_critical_section_finish(jni_env: *const libc::c_void) {
-    memory_manager::critical_section_finish(&SINGLETON);
-    unsafe { ((*UPCALLS).critical_section_finish)(jni_env) };
-}
-
-#[no_mangle]
 pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
+    use crate::mmtk::vm::VMBinding;
+    use mmtk::vm::ActivePlan;
+
     SINGLETON
         .get_plan()
         .base()
@@ -251,6 +263,19 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
         .lock()
         .unwrap()
         .push(tls);
+    let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    println!(
+        "gc: {}, push mutator: {} -- request: {}, active: {}",
+        SINGLETON
+            .get_plan()
+            .base()
+            .gc_counter
+            .load(std::sync::atomic::Ordering::SeqCst),
+        <OpenJDK as VMBinding>::VMActivePlan::mutator_id(tls),
+        m.request_id,
+        m.critical_section_active
+    );
+    assert!(!m.critical_section_active, "race/gc issue",);
     SINGLETON
         .get_plan()
         .handle_user_collection_request(tls, true);

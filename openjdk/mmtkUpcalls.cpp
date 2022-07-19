@@ -287,6 +287,7 @@ static int discovered_offset() {
 }
 
 static char* dump_object_string(void* object) {
+  ResourceMark rm(Thread::current());
   oop o = (oop) object;
   return o->print_value_string();
 }
@@ -342,20 +343,21 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
 
 static void mmtk_critical_section_start(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   assert(mutator->critical_section_active == false, "invalid critical section state (active --> active)");
+  mutator->request_id += 1;
+  mutator->critical_section_memory_footprint = 0;
+  mutator->cirtical_section_object_counter = 0;
   mutator->critical_section_active = true;
-  ++mutator->request_id;
 }
 
 static void mmtk_critical_section_finish(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   assert(mutator->critical_section_active == true, "invalid critical section state (false --> false)");
   mutator->critical_section_active = false;
-  assert(Thread::current()->is_Java_thread(), "Only Java thread can enter vm");
-  JavaThread* current = ((JavaThread*) Thread::current());
-  ThreadInVMfromNative tiv(current);
   mmtk_do_explicit_gc(thread);
 }
 
