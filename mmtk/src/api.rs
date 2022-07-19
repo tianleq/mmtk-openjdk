@@ -264,7 +264,7 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
         .unwrap()
         .push(tls);
     let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
-    println!(
+    // println!(
     //     "gc: {}, push mutator: {} -- request: {}, active: {}",
     //     SINGLETON
     //         .get_plan()
@@ -275,7 +275,7 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
     //     m.request_id,
     //     m.critical_section_active
     // );
-    assert!(!m.critical_section_active, "race/gc issue",);
+    // assert!(!m.critical_section_active, "race/gc issue");
     SINGLETON
         .get_plan()
         .handle_user_collection_request(tls, true);
