@@ -265,16 +265,16 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
         .push(tls);
     let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     println!(
-        "gc: {}, push mutator: {} -- request: {}, active: {}",
-        SINGLETON
-            .get_plan()
-            .base()
-            .gc_counter
-            .load(std::sync::atomic::Ordering::SeqCst),
-        <OpenJDK as VMBinding>::VMActivePlan::mutator_id(tls),
-        m.request_id,
-        m.critical_section_active
-    );
+    //     "gc: {}, push mutator: {} -- request: {}, active: {}",
+    //     SINGLETON
+    //         .get_plan()
+    //         .base()
+    //         .gc_counter
+    //         .load(std::sync::atomic::Ordering::SeqCst),
+    //     <OpenJDK as VMBinding>::VMActivePlan::mutator_id(tls),
+    //     m.request_id,
+    //     m.critical_section_active
+    // );
     assert!(!m.critical_section_active, "race/gc issue",);
     SINGLETON
         .get_plan()
