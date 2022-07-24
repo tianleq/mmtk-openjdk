@@ -20,10 +20,10 @@
 
 class MMTkObjectOwnerBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
-  static void record_modified_node_slow(void* src, void *new_val);
+  static void record_non_local_object_slow(void* src, void *new_val);
 
   virtual bool is_slow_path_call(address call) {
-    return call == CAST_FROM_FN_PTR(address, record_modified_node_slow);
+    return call == CAST_FROM_FN_PTR(address, record_non_local_object_slow);
   }
 
   // virtual void record_modified_node(oop src);
@@ -35,7 +35,7 @@ class MMTkObjectOwnerBarrierStub;
 
 class MMTkObjectOwnerBarrierSetAssembler: public MMTkBarrierSetAssembler {
   void oop_store_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Address dst, Register val, Register tmp1, Register tmp2);
-  void record_modified_node(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2);
+  void record_non_local_object(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2);
 public:
   virtual void store_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Address dst, Register val, Register tmp1, Register tmp2) {
     if (type == T_OBJECT || type == T_ARRAY) {
@@ -67,7 +67,7 @@ public:
 
     __ save_live_registers_no_oop_map(true);
 
-    __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow), 1);
+    __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), 2);
 
     __ restore_live_registers(true);
 

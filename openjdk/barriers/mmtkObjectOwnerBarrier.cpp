@@ -2,7 +2,7 @@
 #include "mmtkObjectOwnerBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 
-void MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow(void* obj, void *new_val) {
+void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow(void* obj, void *new_val) {
   ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, new_val);
 }
 
@@ -13,10 +13,10 @@ void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_
   intptr_t shift = (addr >> 3) & 0b111;
   uint8_t byte_val = *meta_addr;
   if (((byte_val >> shift) & 1) == 1) {
-    record_modified_node_slow((void*) src);
+    record_non_local_object_slow((void*) src);
   }
 #else
-  record_modified_node_slow((void*) src, (void *) new_val);
+  record_non_local_object_slow((void*) src, (void *) new_val);
 #endif
 }
 
@@ -32,12 +32,11 @@ void MMTkObjectOwnerBarrierSetAssembler::oop_store_at(MacroAssembler* masm, Deco
     return;
   }
 
+  record_non_local_object(masm, dst.base(), val, tmp2);
   BarrierSetAssembler::store_at(masm, decorators, type, dst, val, tmp1, tmp2);
-
-  record_modified_node(masm, dst.base(), tmp1, tmp2);
 }
 
-void MMTkObjectOwnerBarrierSetAssembler::record_modified_node(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2) {
+void MMTkObjectOwnerBarrierSetAssembler::record_non_local_object(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2) {
 #if MMTK_ENABLE_OBJECT_BARRIER_FASTPATH
   Label done;
 
@@ -67,14 +66,15 @@ void MMTkObjectOwnerBarrierSetAssembler::record_modified_node(MacroAssembler* ma
 
   assert_different_registers(c_rarg0, obj);
   __ movptr(c_rarg0, obj);
-  __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow), 2);
+  __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), 2);
 
   __ bind(done);
 #else
   assert_different_registers(c_rarg0, obj);
-  __ movptr(c_rarg1, obj);
+  assert_different_registers(c_farg1, tmp1);
+  __ movptr(c_rarg1, tmp1);
   __ movptr(c_rarg0, obj);
-  __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow), 2);
+  __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), 2);
 #endif
 }
 
@@ -191,11 +191,11 @@ void MMTkObjectOwnerBarrierSetC2::record_modified_node(GraphKit* kit, Node* src,
 
   __ if_then(result, BoolTest::ne, zero, unlikely); {
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow), "record_modified_node", src);
+    Node* x = __ make_leaf_call(tf, CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), "record_modified_node", src);
   } __ end_if();
 #else
   const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM);
-  Node* x = __ make_leaf_call(tf, CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_modified_node_slow), "record_modified_node", src, val);
+  Node* x = __ make_leaf_call(tf, CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), "record_modified_node", src, val);
 #endif
 
   kit->final_sync(ideal); // Final sync IdealKit and GraphKit.

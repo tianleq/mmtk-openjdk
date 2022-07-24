@@ -252,6 +252,15 @@ pub extern "C" fn mmtk_enable_stress(jni_env: *const libc::c_void) {
 }
 
 #[no_mangle]
+pub extern "C" fn mmtk_global_gc_id() -> usize {
+    SINGLETON
+        .get_plan()
+        .base()
+        .gc_id
+        .load(std::sync::atomic::Ordering::SeqCst)
+}
+
+#[no_mangle]
 pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
     use crate::mmtk::vm::VMBinding;
     use mmtk::vm::ActivePlan;
@@ -279,6 +288,11 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
     SINGLETON
         .get_plan()
         .handle_user_collection_request(tls, true);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_print_thread_stack() {
+    unsafe { ((*UPCALLS).print_thread_stack)() };
 }
 
 #[no_mangle]

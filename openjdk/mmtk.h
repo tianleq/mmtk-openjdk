@@ -149,6 +149,7 @@ typedef struct {
     void (*mmtk_critical_section_start)(void *jni_env);
     void (*mmtk_critical_section_finish)(void *jni_env);
     size_t (*mmtk_mutator_id)(void *tls);
+    void (*print_thread_stack)();
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls, size_t heap_size);
@@ -176,6 +177,7 @@ extern void add_phantom_candidate(void* ref, void* referent);
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 extern void mmtk_do_explicit_gc(void* tls);
+extern size_t mmtk_global_gc_id();
 
 
 #ifdef __cplusplus

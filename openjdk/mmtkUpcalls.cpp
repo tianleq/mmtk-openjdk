@@ -375,12 +375,22 @@ static void mmtk_critical_section_finish(void *jni_env) {
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   assert(mutator->critical_section_active == true, "invalid critical section state (false --> false)");
   mutator->critical_section_active = false;
+  size_t global_gc_id = mmtk_global_gc_id();
+  size_t local_start_the_world = Atomic::load(&mmtk_start_the_world_count);
+  assert(global_gc_id == local_start_the_world, "gc is going on in the background");
   mmtk_do_explicit_gc(thread);
 }
 
 static size_t mmtk_mutator_id(void *tls) {
-  Thread *thread = (Thread *) tls;
+  JavaThread *thread = (JavaThread *) tls;
   return thread->osthread()->thread_id();
+}
+
+static void mmtk_print_thread_stack() {
+  JavaThread *thread = (JavaThread *) Thread::current();
+  ResourceMark rm(thread);
+  thread->frame_anchor()->make_walkable(thread);
+  thread->print_stack_on(tty);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -428,4 +438,5 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_critical_section_start,
   mmtk_critical_section_finish,
   mmtk_mutator_id,
+  mmtk_print_thread_stack,
 };

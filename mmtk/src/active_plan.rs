@@ -29,6 +29,10 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
         unsafe { ((*UPCALLS).mmtk_mutator_id)(tls) }
     }
 
+    fn print_thread_stack() {
+        unsafe { ((*UPCALLS).print_thread_stack)() }
+    }
+
     fn reset_mutator_iterator() {
         unsafe {
             ((*UPCALLS).reset_mutator_iterator)();
