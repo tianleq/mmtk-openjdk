@@ -55,11 +55,12 @@ public:
     Label runtime;
 
     __ push(c_rarg0);
-    // __ push(c_rarg1);
+    __ push(c_rarg1);
     // __ push(c_rarg2);
     __ push(rax);
 
     __ load_parameter(0, c_rarg0);
+    __ load_parameter(1, c_rarg1);
     // __ load_parameter(1, c_rarg1);
     // __ load_parameter(2, c_rarg2);
 
@@ -74,7 +75,7 @@ public:
     __ bind(done);
     __ pop(rax);
     // __ pop(c_rarg2);
-    // __ pop(c_rarg1);
+    __ pop(c_rarg1);
     __ pop(c_rarg0);
 
     __ epilogue();

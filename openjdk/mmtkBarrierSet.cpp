@@ -80,7 +80,7 @@ MMTkBarrierBase* get_selected_barrier() {
   const char* barrier = mmtk_active_barrier();
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
-  else if (strcmp(barrier, "ObjectLoggingBarrier") == 0) selected_barrier = new MMTkObjectOwnerBarrier();
+  else if (strcmp(barrier, "ObjectOwnerBarrier") == 0) selected_barrier = new MMTkObjectOwnerBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }

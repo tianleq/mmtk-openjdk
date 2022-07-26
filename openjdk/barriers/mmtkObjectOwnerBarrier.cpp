@@ -3,7 +3,7 @@
 #include "runtime/interfaceSupport.inline.hpp"
 
 void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow(void* obj, void *new_val) {
-  ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, new_val);
+  // ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, (void*) new_val);
 }
 
 void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_val) {
@@ -31,9 +31,10 @@ void MMTkObjectOwnerBarrierSetAssembler::oop_store_at(MacroAssembler* masm, Deco
     BarrierSetAssembler::store_at(masm, decorators, type, dst, val, tmp1, tmp2);
     return;
   }
-
+  
   record_non_local_object(masm, dst.base(), val, tmp2);
   BarrierSetAssembler::store_at(masm, decorators, type, dst, val, tmp1, tmp2);
+  
 }
 
 void MMTkObjectOwnerBarrierSetAssembler::record_non_local_object(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2) {
@@ -70,11 +71,12 @@ void MMTkObjectOwnerBarrierSetAssembler::record_non_local_object(MacroAssembler*
 
   __ bind(done);
 #else
-  assert_different_registers(c_rarg0, obj);
-  assert_different_registers(c_farg1, tmp1);
+  assert_different_registers(c_rarg0, c_rarg1, tmp1, obj);
+  __ pusha();
   __ movptr(c_rarg1, tmp1);
   __ movptr(c_rarg0, obj);
   __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow), 2);
+  __ popa();
 #endif
 }
 
@@ -170,6 +172,7 @@ void MMTkObjectOwnerBarrierSetC1::record_modified_node(LIRAccess& access, LIR_Op
 // }
 
 void MMTkObjectOwnerBarrierSetC2::record_modified_node(GraphKit* kit, Node* src, Node* val) const {
+
   if (val != NULL && val->is_Con()) {
     const Type* t = val->bottom_type();
     if (t == TypePtr::NULL_PTR) return;
