@@ -265,14 +265,14 @@ pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
     use crate::mmtk::vm::VMBinding;
     use mmtk::vm::ActivePlan;
 
-    SINGLETON
-        .get_plan()
-        .base()
-        .mutators
-        .lock()
-        .unwrap()
-        .push(tls);
-    let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    // SINGLETON
+    //     .get_plan()
+    //     .base()
+    //     .mutators
+    //     .lock()
+    //     .unwrap()
+    //     .push(tls);
+    // let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     // println!(
     //     "gc: {}, push mutator: {} -- request: {}, active: {}",
     //     SINGLETON
@@ -350,7 +350,7 @@ pub extern "C" fn record_non_local_object(
     obj: ObjectReference,
     new_val: ObjectReference,
 ) {
-    // mutator.record_non_local_object(obj, new_val);
+    mutator.record_non_local_object(obj, new_val);
 }
 
 // finalization

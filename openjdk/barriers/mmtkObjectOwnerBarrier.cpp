@@ -3,7 +3,7 @@
 #include "runtime/interfaceSupport.inline.hpp"
 
 void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow(void* obj, void *new_val) {
-  // ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, (void*) new_val);
+  ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, (void*) new_val);
 }
 
 void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_val) {

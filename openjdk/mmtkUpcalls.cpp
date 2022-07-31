@@ -377,7 +377,7 @@ static void mmtk_critical_section_finish(void *jni_env) {
   mutator->critical_section_active = false;
   size_t global_gc_id = mmtk_global_gc_id();
   size_t local_start_the_world = Atomic::load(&mmtk_start_the_world_count);
-  assert(global_gc_id == local_start_the_world, "gc is going on in the background");
+  // assert(global_gc_id == local_start_the_world, "gc is going on in the background");
   mmtk_do_explicit_gc(thread);
 }
 
