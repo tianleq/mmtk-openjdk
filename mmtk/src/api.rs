@@ -1,3 +1,4 @@
+use crate::NewBuffer;
 use crate::OpenJDK;
 use crate::OpenJDK_Upcalls;
 use crate::SINGLETON;
@@ -262,8 +263,8 @@ pub extern "C" fn mmtk_global_gc_id() -> usize {
 
 #[no_mangle]
 pub extern "C" fn mmtk_do_explicit_gc(tls: VMMutatorThread) {
-    use crate::mmtk::vm::VMBinding;
-    use mmtk::vm::ActivePlan;
+    // use crate::mmtk::vm::VMBinding;
+    // use mmtk::vm::ActivePlan;
 
     // SINGLETON
     //     .get_plan()
@@ -365,4 +366,30 @@ pub extern "C" fn get_finalized_object() -> ObjectReference {
         Some(obj) => obj,
         None => unsafe { Address::ZERO.to_object_reference() },
     }
+}
+
+const CAPACITY: usize = 4096;
+
+#[no_mangle]
+pub extern "C" fn mmtk_threadlocal_closure(
+    tls: VMMutatorThread,
+    ptr: *mut Address,
+    length: usize,
+    capacity: usize,
+) -> NewBuffer {
+    use crate::mmtk::vm::VMBinding;
+    use mmtk::vm::ActivePlan;
+    if !ptr.is_null() {
+        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+        memory_manager::mmtk_threadlocal_closure(&SINGLETON, m, buf);
+    }
+    let (ptr, _, capacity) = {
+        // TODO: Use Vec::into_raw_parts() when the method is available.
+        use std::mem::ManuallyDrop;
+        let new_vec = Vec::with_capacity(CAPACITY);
+        let mut me = ManuallyDrop::new(new_vec);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    };
+    NewBuffer { ptr, capacity }
 }

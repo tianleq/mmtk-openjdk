@@ -33,6 +33,7 @@
 #include "mmtkRootsClosure.hpp"
 #include "mmtkUpcalls.hpp"
 #include "mmtkVMCompanionThread.hpp"
+#include "mmtkThreadlocalClosure.hpp"
 #include "runtime/atomic.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
@@ -40,6 +41,7 @@
 #include "runtime/thread.hpp"
 #include "runtime/threadSMR.hpp"
 #include "runtime/vmThread.hpp"
+#include "runtime/handshake.hpp"
 #include "utilities/debug.hpp"
 
 // Note: This counter must be accessed using the Atomic class.
@@ -76,13 +78,12 @@ static void mmtk_resume_mutators(void *tls) {
 #endif
 
   MMTkHeap::_create_stack_scan_work = NULL;
-
+  // Note: we don't have to hold gc_lock to increment the counter.
+  Atomic::inc(&mmtk_start_the_world_count);
+  
   log_debug(gc)("Requesting the VM to resume all mutators...");
   MMTkHeap::heap()->companion_thread()->request(MMTkVMCompanionThread::_threads_resumed, true);
   log_debug(gc)("Mutators resumed. Now notify any mutators waiting for GC to finish...");
-
-  // Note: we don't have to hold gc_lock to increment the counter.
-  Atomic::inc(&mmtk_start_the_world_count);
 
   {
     MutexLockerEx locker(MMTkHeap::heap()->gc_lock(), true);
@@ -369,16 +370,20 @@ static void mmtk_critical_section_start(void *jni_env) {
   mutator->critical_section_active = true;
 }
 
+
+static void mmtk_do_thread_local_trace(JavaThread *t) {
+  MMTkThreadlocalRootsHandshakeClosure closure;
+  Handshake::execute(&closure, t);
+}
+
 static void mmtk_critical_section_finish(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   assert(mutator->critical_section_active == true, "invalid critical section state (false --> false)");
   mutator->critical_section_active = false;
-  size_t global_gc_id = mmtk_global_gc_id();
-  size_t local_start_the_world = Atomic::load(&mmtk_start_the_world_count);
-  // assert(global_gc_id == local_start_the_world, "gc is going on in the background");
-  mmtk_do_explicit_gc(thread);
+  // mmtk_do_explicit_gc(thread);
+  mmtk_do_thread_local_trace(thread);
 }
 
 static size_t mmtk_mutator_id(void *tls) {
