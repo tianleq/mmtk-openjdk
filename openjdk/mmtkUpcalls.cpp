@@ -386,6 +386,7 @@ static void mmtk_critical_section_finish(void *jni_env) {
   mutator->critical_section_active = false;
   // mmtk_do_explicit_gc(thread);
   mmtk_do_thread_local_trace(thread);
+  printf("%d %d\n", mutator->critical_section_live_object_counter, mutator->critical_section_local_live_object_counter);
 }
 
 static size_t mmtk_mutator_id(void *tls) {
