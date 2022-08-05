@@ -396,12 +396,12 @@ pub extern "C" fn mmtk_threadlocal_closure(
 
 #[no_mangle]
 pub extern "C" fn mmtk_post_threadlocal_closure(tls: VMMutatorThread) {
-    use crate::mmtk::vm::VMBinding;
     use crate::mmtk::vm::ActivePlan;
+    use crate::mmtk::vm::VMBinding;
 
     let mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     memory_manager::mmtk_post_threadlocal_closure(&SINGLETON);
     let c = mutator.barrier.statistics();
-    println!( "{} public objects", c):
+    println!("{} public objects", c);
     mutator.barrier.reset_statistics();
 }
