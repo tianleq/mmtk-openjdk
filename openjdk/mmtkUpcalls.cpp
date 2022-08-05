@@ -367,6 +367,8 @@ static void mmtk_critical_section_start(void *jni_env) {
   mutator->request_id += 1;
   mutator->critical_section_memory_footprint = 0;
   mutator->cirtical_section_object_counter = 0;
+  mutator->critical_section_live_object_counter = 0;
+  mutator->critical_section_local_live_object_counter = 0;
   mutator->critical_section_active = true;
 }
 

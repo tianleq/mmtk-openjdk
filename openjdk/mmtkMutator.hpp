@@ -93,6 +93,8 @@ struct MMTkMutatorContext {
   unsigned request_id;
   unsigned cirtical_section_object_counter;
   size_t critical_section_memory_footprint;
+  unsigned critical_section_live_object_counter;
+  unsigned critical_section_local_live_object_counter;
 
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
