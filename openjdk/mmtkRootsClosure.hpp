@@ -90,7 +90,7 @@ public:
     }
   }
 
-  virtual void do_oop(oop* p)       { assert(*p != NULL, "debug assert on oop*"); do_oop_work(p); }
+  virtual void do_oop(oop* p)       { do_oop_work(p); }
   virtual void do_oop(narrowOop* p) { do_oop_work(p); }
 };
 

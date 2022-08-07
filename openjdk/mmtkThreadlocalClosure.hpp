@@ -71,7 +71,7 @@ public:
     // trace finished since the destructor of MMTkThreadlocalRootsClosure
     // is executed
     mmtk_post_threadlocal_closure(thread);
-    assert(Thread::current()->is_VM_thread(), "The threadlocal handshake should be executed by VMThread.");
+    // assert(Thread::current()->is_VM_thread(), "The threadlocal handshake should be executed by VMThread.");
   }
 };
 

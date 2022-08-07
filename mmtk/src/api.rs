@@ -402,6 +402,6 @@ pub extern "C" fn mmtk_post_threadlocal_closure(tls: VMMutatorThread) {
     let mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     memory_manager::mmtk_post_threadlocal_closure(&SINGLETON);
     let c = mutator.barrier.statistics();
-    println!("{} public objects", c);
+    // println!("{} public objects", c);
     mutator.barrier.reset_statistics();
 }
