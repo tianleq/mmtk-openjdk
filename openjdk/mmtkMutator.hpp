@@ -91,10 +91,18 @@ struct MMTkMutatorContext {
   MutatorConfig config;
   bool critical_section_active;
   unsigned request_id;
-  unsigned cirtical_section_object_counter;
-  size_t critical_section_memory_footprint;
-  unsigned critical_section_live_object_counter;
+  unsigned critical_section_total_object_counter;
+  size_t critical_section_total_object_bytes;
+  unsigned critical_section_total_local_object_counter;
+  size_t critical_section_total_local_object_bytes;
   unsigned critical_section_local_live_object_counter;
+  size_t critical_section_local_live_object_bytes;
+  unsigned critical_section_local_live_private_object_counter;
+  size_t critical_section_local_live_private_object_bytes;
+  unsigned critical_section_write_barrier_counter;
+  unsigned critical_section_write_barrier_slowpath_counter;
+  unsigned critical_section_write_barrier_public_counter;
+  size_t critical_section_write_barrier_public_bytes;
 
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

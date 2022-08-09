@@ -365,11 +365,20 @@ static void mmtk_critical_section_start(void *jni_env) {
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   assert(mutator->critical_section_active == false, "invalid critical section state (active --> active)");
   mutator->request_id += 1;
-  mutator->critical_section_memory_footprint = 0;
-  mutator->cirtical_section_object_counter = 0;
-  mutator->critical_section_live_object_counter = 0;
+  mutator->critical_section_total_object_counter = 0;
+  mutator->critical_section_total_object_bytes = 0;
+  mutator->critical_section_total_local_object_counter = 0;
+  mutator->critical_section_total_local_object_bytes = 0;
   mutator->critical_section_local_live_object_counter = 0;
+  mutator->critical_section_local_live_object_bytes = 0;
+  mutator->critical_section_local_live_private_object_counter = 0;
+  mutator->critical_section_local_live_private_object_bytes = 0;
+  mutator->critical_section_write_barrier_counter = 0;
+  mutator->critical_section_write_barrier_slowpath_counter = 0;
+  mutator->critical_section_write_barrier_public_counter = 0;
+  mutator->critical_section_write_barrier_public_bytes = 0;
   mutator->critical_section_active = true;
+  mmtk_reset_barier_statistics(thread);
 }
 
 
@@ -386,7 +395,19 @@ static void mmtk_critical_section_finish(void *jni_env) {
   mutator->critical_section_active = false;
   // mmtk_do_explicit_gc(thread);
   mmtk_do_thread_local_trace(thread);
-  printf("%d %d %d\n", mutator->cirtical_section_object_counter, mutator->critical_section_live_object_counter, mutator->critical_section_local_live_object_counter);
+  printf("%d, %zu, %d, %zu, %d, %zu, %d, %zu, %d, %d, %d, %zu\n", 
+          mutator->critical_section_total_object_counter, 
+          mutator->critical_section_total_object_bytes, 
+          mutator->critical_section_total_local_object_counter, 
+          mutator->critical_section_total_local_object_bytes,
+          mutator->critical_section_local_live_object_counter,
+          mutator->critical_section_local_live_object_bytes,
+          mutator->critical_section_local_live_private_object_counter,
+          mutator->critical_section_local_live_private_object_bytes,
+          mutator->critical_section_write_barrier_counter,
+          mutator->critical_section_write_barrier_slowpath_counter,
+          mutator->critical_section_write_barrier_public_counter,
+          mutator->critical_section_write_barrier_public_bytes);
 }
 
 static size_t mmtk_mutator_id(void *tls) {

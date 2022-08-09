@@ -399,9 +399,22 @@ pub extern "C" fn mmtk_post_threadlocal_closure(tls: VMMutatorThread) {
     use crate::mmtk::vm::ActivePlan;
     use crate::mmtk::vm::VMBinding;
 
-    let mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    let mut mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     memory_manager::mmtk_post_threadlocal_closure(&SINGLETON);
-    let c = mutator.barrier.statistics();
+    let s = mutator.barrier.statistics();
+    mutator.critical_section_write_barrier_public_counter = s.0;
+    mutator.critical_section_write_barrier_public_bytes = s.1;
+    mutator.critical_section_write_barrier_counter = s.2;
+    mutator.critical_section_write_barrier_slowpath_counter = s.3;
     // println!("{} public objects", c);
+    // mutator.barrier.reset_statistics();
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_reset_barier_statistics(tls: VMMutatorThread) {
+    use crate::mmtk::vm::ActivePlan;
+    use crate::mmtk::vm::VMBinding;
+
+    let mut mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
     mutator.barrier.reset_statistics();
 }

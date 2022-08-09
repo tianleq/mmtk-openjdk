@@ -19,12 +19,6 @@ private:
 
   template <class T>
   void do_oop_work(T* p) {
-    // T heap_oop = RawAccess<>::oop_load(p);
-    // if (!CompressedOops::is_null(heap_oop)) {
-    //   oop obj = CompressedOops::decode_not_null(heap_oop);
-    //   oop fwd = (oop) trace_root_object(_trace, obj);
-    //   RawAccess<>::oop_store(p, fwd);
-    // }
     _buffer[_cursor++] = (void*) p;
     if (_cursor >= _cap) {
       flush();

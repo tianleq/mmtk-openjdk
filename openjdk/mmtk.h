@@ -180,6 +180,7 @@ extern void mmtk_do_explicit_gc(void* tls);
 extern size_t mmtk_global_gc_id();
 extern NewBuffer mmtk_threadlocal_closure(void* tls, void** buf, size_t len, size_t cap);
 extern void mmtk_post_threadlocal_closure(void* tls);
+extern void mmtk_reset_barier_statistics(void *tls);
 
 
 #ifdef __cplusplus
