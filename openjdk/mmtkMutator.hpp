@@ -103,6 +103,7 @@ struct MMTkMutatorContext {
   unsigned critical_section_write_barrier_slowpath_counter;
   unsigned critical_section_write_barrier_public_counter;
   size_t critical_section_write_barrier_public_bytes;
+  unsigned access_non_local_object_counter;
 
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

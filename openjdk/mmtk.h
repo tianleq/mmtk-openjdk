@@ -45,6 +45,7 @@ extern void post_alloc(MMTk_Mutator mutator, void* refer,
 
 extern void record_modified_node(MMTk_Mutator mutator, void* obj);
 extern void record_non_local_object(MMTk_Mutator mutator, void* obj, void *new_val);
+extern void record_access_non_local_object(MMTk_Mutator mutator, void* obj);
 
 extern void release_buffer(void** buffer, size_t len, size_t cap);
 
@@ -178,10 +179,13 @@ extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 extern void mmtk_do_explicit_gc(void* tls);
 extern size_t mmtk_global_gc_id();
-extern NewBuffer mmtk_threadlocal_closure(void* tls, void** buf, size_t len, size_t cap);
+extern NewBuffer mmtk_threadlocal_closure(void* tls, void** buf, size_t len, size_t cap, void *set);
 extern void mmtk_post_threadlocal_closure(void* tls);
-extern void mmtk_reset_barier_statistics(void *tls);
-
+extern void mmtk_reset_barier_statistics(void *tls, size_t mutator_id);
+extern void mmtk_set_public_bit(void* tls, void *objec, bool force);
+extern void release_visited_buffer(void* buffer);
+extern void *mmtk_new_visited_set();
+extern void mmtk_write_log_file(const char *file, void *tls);
 
 #ifdef __cplusplus
 }

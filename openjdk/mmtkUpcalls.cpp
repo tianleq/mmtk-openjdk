@@ -47,6 +47,11 @@
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
+static Monitor *log_file_lock = new Monitor(Monitor::nonleaf,
+                                            "log file lock",
+                                            true,
+                                            Monitor::_safepoint_check_never);
+
 static void mmtk_stop_all_mutators(void *tls, void (*create_stack_scan_work)(void* mutator)) {
   MMTkHeap::_create_stack_scan_work = create_stack_scan_work;
 
@@ -378,7 +383,8 @@ static void mmtk_critical_section_start(void *jni_env) {
   mutator->critical_section_write_barrier_public_counter = 0;
   mutator->critical_section_write_barrier_public_bytes = 0;
   mutator->critical_section_active = true;
-  mmtk_reset_barier_statistics(thread);
+  mutator->access_non_local_object_counter = 0;
+  mmtk_reset_barier_statistics(thread, thread->osthread()->thread_id());
 }
 
 
@@ -386,6 +392,16 @@ static void mmtk_do_thread_local_trace(JavaThread *t) {
   MMTkThreadlocalRootsHandshakeClosure closure;
   Handshake::execute(&closure, t);
 }
+
+
+// static int expand_and_open(const char* pattern, char* buf, size_t buflen, size_t pos) {
+//   int fd = -1;
+//   if (Arguments::copy_expand_pid(pattern, strlen(pattern), &buf[pos], buflen - pos)) {
+//     // the O_EXCL flag will cause the open to fail if the file exists
+//     fd = open(buf, O_RDWR | O_CREAT | O_APPEND, 0666);
+//   }
+//   return fd;
+// }
 
 static void mmtk_critical_section_finish(void *jni_env) {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
@@ -395,19 +411,49 @@ static void mmtk_critical_section_finish(void *jni_env) {
   mutator->critical_section_active = false;
   // mmtk_do_explicit_gc(thread);
   mmtk_do_thread_local_trace(thread);
-  printf("%d, %zu, %d, %zu, %d, %zu, %d, %zu, %d, %d, %d, %zu\n", 
-          mutator->critical_section_total_object_counter, 
-          mutator->critical_section_total_object_bytes, 
-          mutator->critical_section_total_local_object_counter, 
-          mutator->critical_section_total_local_object_bytes,
-          mutator->critical_section_local_live_object_counter,
-          mutator->critical_section_local_live_object_bytes,
-          mutator->critical_section_local_live_private_object_counter,
-          mutator->critical_section_local_live_private_object_bytes,
-          mutator->critical_section_write_barrier_counter,
-          mutator->critical_section_write_barrier_slowpath_counter,
-          mutator->critical_section_write_barrier_public_counter,
-          mutator->critical_section_write_barrier_public_bytes);
+  // static char buf[1024];
+  // int fd = -1;
+  // const char *pattern = "log.csv";
+  // const char* cwd = os::get_current_directory(buf, sizeof(buf));
+  // size_t pos = strlen(cwd);
+  // int fsep_len = jio_snprintf(&buf[pos], sizeof(buf)-pos, "%s", os::file_separator());
+  //   pos += fsep_len;
+  //   if (fsep_len > 0) {
+  //     // fd = expand_and_open("log.csv", buf, sizeof(buf), pos);
+  //     Arguments::copy_expand_pid(pattern, strlen(pattern), &buf[pos], sizeof(buf) - pos);
+  // }
+  MutexLockerEx locker(log_file_lock, Mutex::_no_safepoint_check_flag);
+  // mmtk_write_log_file("/home/tianleq/mmtk/log.csv", thread);
+  printf("%d\n", mutator->access_non_local_object_counter);
+  // fdStream log(fd);
+  // printf("%d, %zu, %d, %zu, %d, %zu, %d, %zu, %d, %d, %d, %zu\n", 
+  //         mutator->critical_section_total_object_counter, 
+  //         mutator->critical_section_total_object_bytes, 
+  //         mutator->critical_section_total_local_object_counter, 
+  //         mutator->critical_section_total_local_object_bytes,
+  //         mutator->critical_section_local_live_object_counter,
+  //         mutator->critical_section_local_live_object_bytes,
+  //         mutator->critical_section_local_live_private_object_counter,
+  //         mutator->critical_section_local_live_private_object_bytes,
+  //         mutator->critical_section_write_barrier_counter,
+  //         mutator->critical_section_write_barrier_slowpath_counter,
+  //         mutator->critical_section_write_barrier_public_counter,
+  //         mutator->critical_section_write_barrier_public_bytes);
+  // log.print("%d, %zu, %d, %zu, %d, %zu, %d, %zu, %d, %d, %d, %zu\n", 
+  //         mutator->critical_section_total_object_counter, 
+  //         mutator->critical_section_total_object_bytes, 
+  //         mutator->critical_section_total_local_object_counter, 
+  //         mutator->critical_section_total_local_object_bytes,
+  //         mutator->critical_section_local_live_object_counter,
+  //         mutator->critical_section_local_live_object_bytes,
+  //         mutator->critical_section_local_live_private_object_counter,
+  //         mutator->critical_section_local_live_private_object_bytes,
+  //         mutator->critical_section_write_barrier_counter,
+  //         mutator->critical_section_write_barrier_slowpath_counter,
+  //         mutator->critical_section_write_barrier_public_counter,
+  //         mutator->critical_section_write_barrier_public_bytes);
+
+  // close(fd);
 }
 
 static size_t mmtk_mutator_id(void *tls) {

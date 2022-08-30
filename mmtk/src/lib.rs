@@ -30,6 +30,16 @@ pub struct NewBuffer {
     pub capacity: usize,
 }
 
+#[repr(C)]
+pub struct ThreadlocalClosureResult {
+    pub ptr: *mut Address,
+    pub capacity: usize,
+
+    pub visited: *mut ObjectReference,
+    pub cap: usize,
+    pub size: usize,
+}
+
 type ProcessEdgesFn = *const extern "C" fn(buf: *mut Address, size: usize, cap: usize) -> NewBuffer;
 
 #[repr(C)]

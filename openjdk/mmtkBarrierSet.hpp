@@ -58,6 +58,7 @@ class MMTkBarrierSetRuntime: public CHeapObj<mtGC> {
 public:
   virtual void record_modified_node(oop object) {};
   virtual void record_non_local_object(oop object, oop new_val) {};
+  virtual void record_access_non_local_object(oop object) {};
   virtual bool is_slow_path_call(address call) {
     return false;
   }
@@ -192,6 +193,27 @@ public:
       runtime()->record_non_local_object(dst, src);
       Raw::clone(src, dst, size);
       runtime()->record_modified_node(dst);
+    }
+
+    // Heap oop accesses. These accessors get resolved when
+    // IN_HEAP is set (e.g. when using the HeapAccess API), it is
+    // an oop_* overload, and the barrier strength is AS_NORMAL.
+    template <typename T>
+    static oop oop_load_in_heap(T* addr) {
+      oop value = Raw::oop_load_in_heap(addr);
+      runtime()->record_access_non_local_object(value);
+      return value;
+    }
+    static oop oop_load_in_heap_at(oop base, ptrdiff_t offset) {
+      oop value = Raw::oop_load_in_heap_at(base, offset);
+      runtime()->record_access_non_local_object(value);
+      return value;
+    }
+    template <typename T>
+    static oop oop_load_not_in_heap(T* addr) {
+      oop value = Raw::oop_load_not_in_heap(addr);
+      runtime()->record_access_non_local_object(value);
+      return value;
     }
   };
 

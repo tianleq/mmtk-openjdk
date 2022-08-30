@@ -75,6 +75,7 @@ public:
   void enable_collection();
 
   virtual HeapWord* mem_allocate(size_t size, bool* gc_overhead_limit_was_exceeded);
+  virtual oop class_allocate(Klass* klass, int size, TRAPS);
   HeapWord* mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_was_exceeded);
 
   MMTkVMCompanionThread* companion_thread() const {

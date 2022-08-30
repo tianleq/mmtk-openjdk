@@ -17,6 +17,8 @@ private:
   size_t _cap;
   size_t _cursor;
 
+  void* _set;
+
   template <class T>
   void do_oop_work(T* p) {
     _buffer[_cursor++] = (void*) p;
@@ -27,24 +29,30 @@ private:
 
   void flush() {
     if (_cursor > 0) {
-      NewBuffer buf = mmtk_threadlocal_closure(_thread, _buffer, _cursor, _cap);
-      _buffer = buf.buf;
-      _cap = buf.cap;
+      NewBuffer result = mmtk_threadlocal_closure(_thread, _buffer, _cursor, _cap, _set);
+      _buffer = result.buf;
+      _cap = result.cap;
       _cursor = 0;
+
     }
   }
 
 public:
   MMTkThreadlocalRootsClosure(Thread *thread) : _thread(thread), _cursor(0) {
-    NewBuffer buf = mmtk_threadlocal_closure(_thread, NULL, 0, 0);
-    _buffer = buf.buf;
-    _cap = buf.cap;
+    NewBuffer result = mmtk_threadlocal_closure(_thread, NULL, 0, 0, 0);
+    _buffer = result.buf;
+    _cap = result.cap;
+    _cursor = 0;
+    _set = mmtk_new_visited_set();
   }
 
   ~MMTkThreadlocalRootsClosure() {
     if (_cursor > 0) flush();
     if (_buffer != NULL) {
       release_buffer(_buffer, _cursor, _cap);
+    }
+    if (_set != NULL) {
+      release_visited_buffer(_set);
     }
   }
 

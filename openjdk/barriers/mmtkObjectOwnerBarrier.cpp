@@ -6,6 +6,10 @@ void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object_slow(void* obj, v
   ::record_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) obj, (void*) new_val);
 }
 
+void MMTkObjectOwnerBarrierSetRuntime::record_access_non_local_object_slow(void* obj) {
+  ::record_access_non_local_object((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, obj);
+}
+
 void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_val) {
 #if MMTK_ENABLE_OBJECT_BARRIER_FASTPATH
   intptr_t addr = (intptr_t) (void*) src;
@@ -17,6 +21,13 @@ void MMTkObjectOwnerBarrierSetRuntime::record_non_local_object(oop src, oop new_
   }
 #else
   record_non_local_object_slow((void*) src, (void *) new_val);
+#endif
+}
+
+void MMTkObjectOwnerBarrierSetRuntime::record_access_non_local_object(oop obj) {
+#if MMTK_ENABLE_OBJECT_BARRIER_FASTPATH
+#else
+  record_access_non_local_object_slow((void *) obj);
 #endif
 }
 
@@ -35,6 +46,27 @@ void MMTkObjectOwnerBarrierSetAssembler::oop_store_at(MacroAssembler* masm, Deco
   record_non_local_object(masm, dst.base(), val, tmp2);
   BarrierSetAssembler::store_at(masm, decorators, type, dst, val, tmp1, tmp2);
   
+}
+
+void MMTkObjectOwnerBarrierSetAssembler::record_access_non_local_object(MacroAssembler* masm, Register val, Register tmp1, Register tmp2) {
+#if MMTK_ENABLE_OBJECT_BARRIER_FASTPATH
+#else
+  assert_different_registers(c_rarg0, val, tmp1, tmp2);
+  __ pusha();
+  __ movptr(c_rarg0, val);
+  __ call_VM_leaf_base(CAST_FROM_FN_PTR(address, MMTkObjectOwnerBarrierSetRuntime::record_access_non_local_object_slow), 1);
+  __ popa();
+#endif
+}
+
+void MMTkObjectOwnerBarrierSetAssembler::oop_load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register dst, Address src, Register tmp1, Register tmp_thread) {
+  // call into vm to see if the object to be load is public
+  Register val = rscratch1;
+  Register tmp2 = rscratch2;
+  assert_different_registers(dst, val, tmp1, tmp2);
+  BarrierSetAssembler::load_at(masm, decorators, type, dst, src, tmp1, tmp_thread);
+  __ movptr(val, src);
+  record_access_non_local_object(masm, val, tmp1, tmp2);
 }
 
 void MMTkObjectOwnerBarrierSetAssembler::record_non_local_object(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2) {

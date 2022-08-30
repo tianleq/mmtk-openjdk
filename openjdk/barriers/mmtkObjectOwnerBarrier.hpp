@@ -21,6 +21,7 @@
 class MMTkObjectOwnerBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
   static void record_non_local_object_slow(void* src, void *new_val);
+  static void record_access_non_local_object_slow(void *obj);
 
   virtual bool is_slow_path_call(address call) {
     return call == CAST_FROM_FN_PTR(address, record_non_local_object_slow);
@@ -28,6 +29,7 @@ public:
 
   // virtual void record_modified_node(oop src);
   virtual void record_non_local_object(oop src, oop new_val);
+  virtual void record_access_non_local_object(oop obj);
 };
 
 class MMTkObjectOwnerBarrierSetC1;
@@ -35,13 +37,23 @@ class MMTkObjectOwnerBarrierStub;
 
 class MMTkObjectOwnerBarrierSetAssembler: public MMTkBarrierSetAssembler {
   void oop_store_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Address dst, Register val, Register tmp1, Register tmp2);
+  void oop_load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register dst, Address src, Register tmp1, Register tmp_thread);
   void record_non_local_object(MacroAssembler* masm, Register obj, Register tmp1, Register tmp2);
+  void record_access_non_local_object(MacroAssembler* masm, Register val, Register tmp1, Register tmp2);
 public:
   virtual void store_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Address dst, Register val, Register tmp1, Register tmp2) {
     if (type == T_OBJECT || type == T_ARRAY) {
       oop_store_at(masm, decorators, type, dst, val, tmp1, tmp2);
     } else {
       BarrierSetAssembler::store_at(masm, decorators, type, dst, val, tmp1, tmp2);
+    }
+  }
+  virtual void load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
+                       Register dst, Address src, Register tmp1, Register tmp_thread) {
+    if (type == T_OBJECT || type == T_ARRAY) {
+      oop_load_at(masm, decorators, type, dst, src, tmp1, tmp_thread);
+    } else {
+      BarrierSetAssembler::load_at(masm, decorators, type, dst, src, tmp1, tmp_thread);
     }
   }
   inline void gen_write_barrier_stub(LIR_Assembler* ce, MMTkObjectOwnerBarrierStub* stub);
