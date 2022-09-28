@@ -63,7 +63,8 @@ pub struct Klass {
     pub class_loader_data: OpaquePointer, // ClassLoaderData*
     pub modifier_flags: i32,
     pub access_flags: i32, // AccessFlags
-    pub trace_id: u64,     // JFR_ONLY(traceid _trace_id;)
+    #[cfg(feature = "jfr")]
+    pub trace_id: u64, // JFR_ONLY(traceid _trace_id;)
     pub last_biased_lock_bulk_revocation_time: i64,
     pub prototype_header: Oop, // markOop,
     pub biased_lock_revocation_count: i32,
@@ -404,6 +405,17 @@ pub struct OopMapBlock {
 
 pub fn validate_memory_layouts() {
     let vm_checksum = unsafe { ((*UPCALLS).compute_klass_mem_layout_checksum)() };
+    println!(
+        "{} {} {} {} {} {} {} {}",
+        mem::size_of::<Klass>(),
+        mem::size_of::<InstanceKlass>(),
+        mem::size_of::<InstanceRefKlass>(),
+        mem::size_of::<InstanceMirrorKlass>(),
+        mem::size_of::<InstanceClassLoaderKlass>(),
+        mem::size_of::<ArrayKlass>(),
+        mem::size_of::<TypeArrayKlass>(),
+        mem::size_of::<ObjArrayKlass>()
+    );
     let binding_checksum = {
         mem::size_of::<Klass>()
             ^ mem::size_of::<InstanceKlass>()

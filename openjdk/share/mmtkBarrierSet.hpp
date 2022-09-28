@@ -30,11 +30,12 @@
 #include "gc/shared/barrierSetConfig.hpp"
 #include "memory/memRegion.hpp"
 #include "mmtk.h"
-#include "mmtkBarrierSetAssembler_x86.hpp"
 #include "oops/access.hpp"
 #include "oops/accessBackend.hpp"
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/fakeRttiSupport.hpp"
+#include "utilities/macros.hpp"
+#include CPU_HEADER(mmtkBarrierSetAssembler)
 
 #define MMTK_ENABLE_ALLOCATION_FASTPATH true
 #define MMTK_ENABLE_BARRIER_FASTPATH true
@@ -103,9 +104,9 @@ struct MMTkBarrierBase: public CHeapObj<mtGC> {
 template <class Runtime, class Assembler, class C1, class C2>
 struct MMTkBarrierImpl: MMTkBarrierBase {
   virtual MMTkBarrierSetRuntime* create_runtime() const { return new Runtime(); }
-  virtual MMTkBarrierSetAssembler* create_assembler() const { return new Assembler(); }
-  virtual MMTkBarrierSetC1* create_c1() const { return new C1(); }
-  virtual MMTkBarrierSetC2* create_c2() const { return new C2(); }
+  virtual MMTkBarrierSetAssembler* create_assembler() const { return NOT_ZERO(new Assembler()) ZERO_ONLY(NULL); }
+  virtual MMTkBarrierSetC1* create_c1() const { return COMPILER1_PRESENT(new C1()) NOT_COMPILER1(NULL); }
+  virtual MMTkBarrierSetC2* create_c2() const { return COMPILER2_PRESENT(new C2()) NOT_COMPILER2(NULL); }
 };
 
 // This class provides the interface between a barrier implementation and

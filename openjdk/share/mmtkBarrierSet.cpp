@@ -26,7 +26,8 @@
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
-#include "mmtkBarrierSetAssembler_x86.hpp"
+#include "utilities/macros.hpp"
+#include CPU_HEADER(mmtkBarrierSetAssembler)
 #include "runtime/interfaceSupport.inline.hpp"
 #ifdef COMPILER1
 #include "mmtkBarrierSetC1.hpp"
@@ -84,9 +85,9 @@ MMTkBarrierBase* get_selected_barrier() {
 }
 
 MMTkBarrierSet::MMTkBarrierSet(MemRegion whole_heap):
-  BarrierSet(get_selected_barrier()->create_assembler(),
-             get_selected_barrier()->create_c1(),
-             get_selected_barrier()->create_c2(),
+  BarrierSet((BarrierSetAssembler *) get_selected_barrier()->create_assembler(),
+             (BarrierSetC1 *) get_selected_barrier()->create_c1(),
+             (BarrierSetC2 *) get_selected_barrier()->create_c2(),
              BarrierSet::FakeRtti(BarrierSet::ThirdPartyHeapBarrierSet)),
   _whole_heap(whole_heap),
   _runtime(get_selected_barrier()->create_runtime()) {}

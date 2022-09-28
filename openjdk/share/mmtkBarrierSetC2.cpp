@@ -22,6 +22,7 @@
  *
  */
 
+#ifdef COMPILER2
 #include "precompiled.hpp"
 #include "mmtk.h"
 #include "mmtkBarrierSet.hpp"
@@ -633,3 +634,4 @@ bool MMTkBarrierSetC2::can_remove_barrier(GraphKit* kit, PhaseTransform* phase, 
 
   return false;
 }
+#endif

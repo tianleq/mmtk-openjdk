@@ -1,6 +1,6 @@
 #ifndef MMTK_OPENJDK_MMTK_BARRIER_SET_C1_HPP
 #define MMTK_OPENJDK_MMTK_BARRIER_SET_C1_HPP
-
+#ifdef COMPILER1
 #include "c1/c1_CodeStubs.hpp"
 #include "gc/shared/c1/barrierSetC1.hpp"
 
@@ -83,5 +83,7 @@ struct MMTkC1BarrierStub: CodeStub {
 
   NOT_PRODUCT(virtual void print_name(outputStream* out) const { out->print("MMTkC1BarrierStub"); });
 };
+
+#endif
 
 #endif // MMTK_OPENJDK_MMTK_BARRIER_SET_C1_HPP
