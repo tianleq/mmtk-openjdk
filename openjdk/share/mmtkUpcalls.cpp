@@ -33,6 +33,7 @@
 #include "mmtkRootsClosure.hpp"
 #include "mmtkUpcalls.hpp"
 #include "mmtkVMCompanionThread.hpp"
+#include "mmtkThreadlocalClosure.hpp"
 #include "runtime/atomic.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "runtime/os.hpp"
@@ -44,6 +45,11 @@
 
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
+
+static Monitor *log_file_lock = new Monitor(Monitor::nonleaf,
+                                            "log file lock",
+                                            true,
+                                            Monitor::_safepoint_check_never);
 
 static void mmtk_stop_all_mutators(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure) {
   ClassLoaderDataGraph::clear_claimed_marks();
@@ -341,6 +347,52 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
   assert(Universe::has_reference_pending_list(), "Reference pending list is empty after swap");
 }
 
+static void mmtk_critical_section_start(void *jni_env) {
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->critical_section_active == false, "invalid critical section state (active --> active)");
+  mutator->request_id += 1;
+  mutator->critical_section_total_object_counter = 0;
+  mutator->critical_section_total_object_bytes = 0;
+  mutator->critical_section_total_local_object_counter = 0;
+  mutator->critical_section_total_local_object_bytes = 0;
+  mutator->critical_section_local_live_object_counter = 0;
+  mutator->critical_section_local_live_object_bytes = 0;
+  mutator->critical_section_local_live_private_object_counter = 0;
+  mutator->critical_section_local_live_private_object_bytes = 0;
+  mutator->critical_section_write_barrier_counter = 0;
+  mutator->critical_section_write_barrier_slowpath_counter = 0;
+  mutator->critical_section_write_barrier_public_counter = 0;
+  mutator->critical_section_write_barrier_public_bytes = 0;
+  mutator->critical_section_active = true;
+  mutator->access_non_local_object_counter = 0;
+  // mutator->set_public_counter = 0;
+  mmtk_reset_barier_statistics(thread, thread->osthread()->thread_id());
+}
+
+static void mmtk_do_thread_local_trace(JavaThread *t) {
+  MMTkThreadlocalRootsHandshakeClosure closure;
+  Handshake::execute(&closure, t);
+}
+
+static void mmtk_critical_section_finish(void *jni_env) {
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->critical_section_active == true, "invalid critical section state (false --> false)");
+  mutator->critical_section_active = false;
+  mmtk_do_thread_local_trace(thread);
+  MutexLockerEx locker(log_file_lock, Mutex::_no_safepoint_check_flag);
+  mmtk_write_log_file("/home/tianleq/mmtk/log.csv", thread);
+
+}
+
+static size_t mmtk_mutator_id(void *tls) {
+  JavaThread *thread = (JavaThread *) tls;
+  return thread->osthread()->thread_id();
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -379,5 +431,8 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_number_of_mutators,
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
-  mmtk_enqueue_references
+  mmtk_enqueue_references,
+  mmtk_critical_section_start,
+  mmtk_critical_section_finish,
+  mmtk_mutator_id,
 };

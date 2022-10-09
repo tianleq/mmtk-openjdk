@@ -57,13 +57,15 @@ impl<F: RootsWorkFactory<OpenJDKEdge>> GCWork<OpenJDK> for ScanCodeCacheRoots<F>
     fn do_work(&mut self, _worker: &mut GCWorker<OpenJDK>, _mmtk: &'static MMTK<OpenJDK>) {
         // Collect all the cached roots
         let mut edges = Vec::with_capacity(crate::CODE_CACHE_ROOTS_SIZE.load(Ordering::Relaxed));
+        let mut sources = Vec::with_capacity(edges.len());
         for roots in (*crate::CODE_CACHE_ROOTS.lock().unwrap()).values() {
             for r in roots {
-                edges.push(*r)
+                edges.push(*r);
+                sources.push(unsafe { (*r).to_object_reference() });
             }
         }
         // Create work packet
-        self.factory.create_process_edge_roots_work(edges);
+        self.factory.create_process_edge_roots_work(sources, edges);
         // Use the following code to scan CodeCache directly, instead of scanning the "remembered set".
         // unsafe {
         //     ((*UPCALLS).scan_code_cache_roots)(create_process_edges_work::<E> as _);

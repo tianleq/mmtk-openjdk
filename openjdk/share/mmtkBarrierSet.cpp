@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
+#include "barriers/mmtkObjectOwnerBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
 #include "utilities/macros.hpp"
 #include CPU_HEADER(mmtkBarrierSetAssembler)
@@ -80,6 +81,7 @@ MMTkBarrierBase* get_selected_barrier() {
   const char* barrier = mmtk_active_barrier();
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
+  else if (strcmp(barrier, "ObjectOwnerBarrier") == 0) selected_barrier = new MMTkObjectOwnerBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }
@@ -150,4 +152,7 @@ void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_post_call(void* src, void* dst, size_t count) {
   ::mmtk_array_copy_post((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+}
+void MMTkBarrierSetRuntime::object_reference_read_slow_call(void* target) {
+  ::mmtk_object_reference_read_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, target);
 }

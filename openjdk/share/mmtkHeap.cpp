@@ -29,6 +29,7 @@
 #include "gc/shared/gcHeapSummary.hpp"
 #include "gc/shared/gcLocker.inline.hpp"
 #include "gc/shared/gcWhen.hpp"
+#include "gc/shared/memAllocator.hpp"
 #include "gc/shared/strongRootsScope.hpp"
 #include "gc/shared/weakProcessor.hpp"
 #include "logging/log.hpp"
@@ -342,6 +343,18 @@ void MMTkHeap::print_tracing_info() const {
   //guarantee(false, "print tracing info not supported");
 }
 
+class MMTkClassAllocator: public ClassAllocator {
+public:
+  MMTkClassAllocator(Klass* klass, size_t word_size, Thread* thread = Thread::current())
+    : ClassAllocator(klass, word_size, thread) {}
+  virtual oop initialize(HeapWord* mem) const;
+};
+
+oop MMTkClassAllocator::initialize(HeapWord* mem) const {
+  oop result = ClassAllocator::initialize(mem);
+  mmtk_set_public_bit(_thread, result, false);
+  return result;
+}
 
 // Registering and unregistering an nmethod (compiled code) with the heap.
 // Override with specific mechanism for each specialized heap type.
@@ -458,6 +471,11 @@ HeapWord* MMTkHeap::mem_allocate(size_t size, bool* gc_overhead_limit_was_exceed
 
 HeapWord* MMTkHeap::mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_was_exceeded) {
   return Thread::current()->third_party_heap_mutator.alloc(size << LogHeapWordSize, AllocatorLos);
+}
+
+oop MMTkHeap::class_allocate(Klass* klass, int size, TRAPS) {
+  MMTkClassAllocator allocator(klass, size, THREAD);
+  return allocator.allocate();
 }
 
 /*

@@ -1,3 +1,4 @@
+use crate::NewBuffer;
 use crate::OpenJDK;
 use crate::OpenJDK_Upcalls;
 use crate::BUILDER;
@@ -24,6 +25,8 @@ use std::sync::atomic::Ordering;
 static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarrier").unwrap());
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
+static OBJECT_OWNER_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("ObjectOwnerBarrier").unwrap());
 
 #[no_mangle]
 pub extern "C" fn get_mmtk_version() -> *const c_char {
@@ -35,6 +38,7 @@ pub extern "C" fn mmtk_active_barrier() -> *const c_char {
     match SINGLETON.get_plan().constraints().barrier {
         BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
         BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+        BarrierSelector::ObjectOwnerBarrier => OBJECT_OWNER_BARRIER.as_ptr(),
         // In case we have more barriers in mmtk-core.
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
@@ -267,6 +271,16 @@ pub extern "C" fn mmtk_harness_end_impl() {
 }
 
 #[no_mangle]
+pub extern "C" fn mmtk_critical_section_start(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).critical_section_start)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_critical_section_finish(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).critical_section_finish)(jni_env) };
+}
+
+#[no_mangle]
 // We trust the name/value pointer is valid.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn process(name: *const c_char, value: *const c_char) -> bool {
@@ -346,6 +360,15 @@ pub extern "C" fn mmtk_object_reference_write_slow(
     mutator
         .barrier()
         .object_reference_write_slow(src, slot, target);
+}
+
+/// Barrier slow-path call
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_read_slow(
+    mutator: &'static mut Mutator<OpenJDK>,
+    target: ObjectReference,
+) {
+    mutator.barrier().object_reference_read_slow(target);
 }
 
 /// Array-copy pre-barrier
@@ -436,4 +459,123 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
             Ordering::Relaxed,
         );
     }
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_threadlocal_closure(
+    tls: VMMutatorThread,
+    ptr: *mut Address,
+    length: usize,
+    capacity: usize,
+    visited: *mut std::collections::HashSet<ObjectReference>,
+) -> NewBuffer {
+    use crate::mmtk::vm::VMBinding;
+    use mmtk::vm::ActivePlan;
+    const CAPACITY: usize = 4096;
+    if !ptr.is_null() {
+        assert!(!visited.is_null(), "visited list is null");
+        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let m = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+        let set = unsafe {
+            assert!(!visited.is_null());
+            &mut *visited
+        };
+        memory_manager::mmtk_threadlocal_closure(&SINGLETON, m, buf, set);
+    }
+    let (ptr, _, capacity) = {
+        // TODO: Use Vec::into_raw_parts() when the method is available.
+        use std::mem::ManuallyDrop;
+        let new_vec = Vec::with_capacity(CAPACITY);
+        let mut me = ManuallyDrop::new(new_vec);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    };
+
+    NewBuffer { ptr, capacity }
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_post_threadlocal_closure(tls: VMMutatorThread) {
+    use crate::mmtk::vm::ActivePlan;
+    use crate::mmtk::vm::VMBinding;
+
+    let mut mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+
+    let s = mutator.barrier.statistics();
+    mutator.critical_section_write_barrier_public_counter = s.0;
+    mutator.critical_section_write_barrier_public_bytes = s.1;
+    mutator.critical_section_write_barrier_counter = s.2;
+    mutator.critical_section_write_barrier_slowpath_counter = s.3;
+    // mutator.access_non_local_object_counter = s.4 as u32;
+    // mutator.set_public_counter += s.2;
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_reset_barier_statistics(tls: VMMutatorThread, mutator_id: usize) {
+    use crate::mmtk::vm::ActivePlan;
+    use crate::mmtk::vm::VMBinding;
+
+    let mut mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    mutator.barrier.reset_statistics(mutator_id);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn release_visited_buffer(
+    ptr: *mut std::collections::HashSet<ObjectReference>,
+) {
+    Box::from_raw(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mmtk_new_visited_set() -> *mut std::collections::HashSet<ObjectReference> {
+    Box::into_raw(Box::new(std::collections::HashSet::new()))
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, objecct: ObjectReference, force: bool) {
+    use crate::mmtk::vm::ActivePlan;
+    use crate::mmtk::vm::VMBinding;
+    let mutator_id = <OpenJDK as VMBinding>::VMActivePlan::mutator_id(tls);
+    let mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    memory_manager::mmtk_set_public_bit(
+        objecct,
+        mutator_id,
+        (mutator.request_id as usize) << 32 | mutator_id,
+        force,
+    );
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mmtk_write_log_file(log: *const libc::c_char, tls: VMMutatorThread) {
+    // use crate::mmtk::vm::ActivePlan;
+    // use crate::mmtk::vm::VMBinding;
+    // use std::io::prelude::*;
+
+    // let mutator = <OpenJDK as VMBinding>::VMActivePlan::mutator(tls);
+    // let file_name = CStr::from_ptr(log).to_str().unwrap();
+    // // println!("{}", file_name);
+    // let mut log_file = std::fs::OpenOptions::new()
+    //     .write(true)
+    //     .append(true)
+    //     .create(true)
+    //     .open(file_name)
+    //     .unwrap();
+    // writeln!(
+    //     log_file,
+    //     "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+    //     mutator.critical_section_total_object_counter,
+    //     mutator.critical_section_total_object_bytes,
+    //     mutator.critical_section_total_local_object_counter,
+    //     mutator.critical_section_total_local_object_bytes,
+    //     mutator.critical_section_local_live_object_counter,
+    //     mutator.critical_section_local_live_object_bytes,
+    //     mutator.critical_section_local_live_private_object_counter,
+    //     mutator.critical_section_local_live_private_object_bytes,
+    //     mutator.critical_section_write_barrier_counter,
+    //     mutator.critical_section_write_barrier_slowpath_counter,
+    //     mutator.critical_section_write_barrier_public_counter,
+    //     mutator.critical_section_write_barrier_public_bytes,
+    //     mutator.set_public_counter,
+    //     mutator.access_non_local_object_counter,
+    // )
+    // .unwrap();
 }

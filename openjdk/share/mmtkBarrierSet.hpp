@@ -37,8 +37,8 @@
 #include "utilities/macros.hpp"
 #include CPU_HEADER(mmtkBarrierSetAssembler)
 
-#define MMTK_ENABLE_ALLOCATION_FASTPATH true
-#define MMTK_ENABLE_BARRIER_FASTPATH true
+#define MMTK_ENABLE_ALLOCATION_FASTPATH false
+#define MMTK_ENABLE_BARRIER_FASTPATH false
 
 const intptr_t ALLOC_BIT_BASE_ADDRESS = GLOBAL_ALLOC_BIT_ADDRESS;
 
@@ -70,6 +70,9 @@ public:
   static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
   /// Generic arraycopy pre-barrier. Called by fast-paths.
   static void object_reference_array_copy_post_call(void* src, void* dst, size_t count);
+  /// Generic slow-path   
+  static void object_reference_read_slow_call(void* target);
+
   /// Check if the address is a slow-path function.
   virtual bool is_slow_path_call(address call) const {
     return call == CAST_FROM_FN_PTR(address, object_reference_write_pre_call)
@@ -87,6 +90,12 @@ public:
   virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const {};
   /// Full arraycopy post-barrier
   virtual void object_reference_array_copy_post(oop* src, oop* dst, size_t count) const {};
+
+  /// Full pre-barrier
+  virtual void object_reference_read_pre(oop target) const {};
+  /// Full post-barrier
+  virtual void object_reference_read_post(oop target) const {};
+
 };
 
 class MMTkBarrierC1;
@@ -219,6 +228,29 @@ public:
     static void clone_in_heap(oop src, oop dst, size_t size) {
       // TODO: We don't need clone barriers at the moment.
       Raw::clone(src, dst, size);
+    }
+
+    // Heap oop accesses. These accessors get resolved when
+    // IN_HEAP is set (e.g. when using the HeapAccess API), it is
+    // an oop_* overload, and the barrier strength is AS_NORMAL.
+    template <typename T>
+    static oop oop_load_in_heap(T* addr) {
+      oop value = Raw::oop_load_in_heap(addr);
+      runtime()->object_reference_read_post(value);
+      return value;
+    }
+    
+    static oop oop_load_in_heap_at(oop base, ptrdiff_t offset) {
+      oop value = Raw::oop_load_in_heap_at(base, offset);
+      runtime()->object_reference_read_post(value);
+      return value;
+    }
+
+    template <typename T>
+    static oop oop_load_not_in_heap(T* addr) {
+      oop value = Raw::oop_load_not_in_heap(addr);
+      runtime()->object_reference_read_post(value);
+      return value;
     }
   };
 

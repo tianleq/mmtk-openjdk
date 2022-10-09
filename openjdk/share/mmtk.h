@@ -60,6 +60,9 @@ extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size
 /// Full array-copy post-barrier
 extern void mmtk_array_copy_post(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
+/// Generic slow-path
+extern void mmtk_object_reference_read_slow(MMTk_Mutator mutator, void* target);
+
 extern void release_buffer(void** buffer, size_t len, size_t cap);
 
 extern bool is_in_mmtk_spaces(void* ref);
@@ -177,6 +180,9 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    void (*mmtk_critical_section_start)(void *jni_env);
+    void (*mmtk_critical_section_finish)(void *jni_env);
+    size_t (*mmtk_mutator_id)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -206,6 +212,14 @@ extern void add_phantom_candidate(void* ref, void* referent);
 
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
+
+extern NewBuffer mmtk_threadlocal_closure(void* tls, void** buf, size_t len, size_t cap, void *set);
+extern void mmtk_post_threadlocal_closure(void* tls);
+extern void mmtk_reset_barier_statistics(void *tls, size_t mutator_id);
+extern void mmtk_set_public_bit(void* tls, void *objec, bool force);
+extern void release_visited_buffer(void* buffer);
+extern void *mmtk_new_visited_set();
+extern void mmtk_write_log_file(const char *file, void *tls);
 
 #ifdef __cplusplus
 }

@@ -25,6 +25,10 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
         }
     }
 
+    fn mutator_id(tls: VMMutatorThread) -> usize {
+        unsafe { ((*UPCALLS).mutator_id)(tls) }
+    }
+
     fn reset_mutator_iterator() {
         unsafe {
             ((*UPCALLS).reset_mutator_iterator)();

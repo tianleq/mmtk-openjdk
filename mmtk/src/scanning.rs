@@ -22,7 +22,7 @@ extern "C" fn report_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
     if !ptr.is_null() {
         let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
         let factory: &mut F = unsafe { &mut *factory_ptr };
-        factory.create_process_edge_roots_work(buf);
+        factory.create_process_edge_roots_work(vec![], buf);
     }
     let (ptr, _, capacity) = {
         // TODO: Use Vec::into_raw_parts() when the method is available.
