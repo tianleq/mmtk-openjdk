@@ -437,3 +437,11 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
         );
     }
 }
+
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(
+    _tls: VMMutatorThread,
+    _objecct: ObjectReference,
+    _force: bool,
+) {
+}

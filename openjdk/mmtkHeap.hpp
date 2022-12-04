@@ -76,6 +76,7 @@ public:
 
   virtual HeapWord* mem_allocate(size_t size, bool* gc_overhead_limit_was_exceeded);
   HeapWord* mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_was_exceeded);
+  virtual oop class_allocate(Klass* klass, int size, TRAPS);
 
   MMTkVMCompanionThread* companion_thread() const {
     return _companion_thread;
