@@ -12,11 +12,8 @@
 #include "opto/callnode.hpp"
 #include "opto/idealKit.hpp"
 
-#define SIDE_METADATA_WORST_CASE_RATIO_LOG 1
-#define LOG_BYTES_IN_CHUNK 22
-#define CHUNK_MASK ((1L << LOG_BYTES_IN_CHUNK) - 1)
 
-const intptr_t SIDE_METADATA_BASE_ADDRESS = (intptr_t) GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
+const intptr_t PUBLIC_BIT_BASE_ADDRESS = (intptr_t) GLOBAL_PUBLIC_BIT_ADDRESS;
 
 class MMTkPublicObjectMarkingBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
