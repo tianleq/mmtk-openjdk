@@ -208,7 +208,9 @@ extern void add_phantom_candidate(void* ref, void* referent);
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 
-extern void mmtk_set_public_bit(void* tls, void *objec, bool force);
+extern void mmtk_set_public_bit(void* tls, void *object, bool force);
+extern void mmtk_publish_object(void *object);
+extern bool mmtk_is_object_published(void *object);
 
 #ifdef __cplusplus
 }

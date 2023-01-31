@@ -442,10 +442,16 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(
-    _tls: VMMutatorThread,
-    objecct: ObjectReference,
-    force: bool,
-) {
-    memory_manager::mmtk_set_public_bit(objecct, force);
+pub extern "C" fn mmtk_set_public_bit(_tls: VMMutatorThread, object: ObjectReference, force: bool) {
+    memory_manager::mmtk_set_public_bit(object, force);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+    memory_manager::mmtk_publish_object::<OpenJDK>(object);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+    memory_manager::mmtk_is_object_published::<OpenJDK>(object)
 }

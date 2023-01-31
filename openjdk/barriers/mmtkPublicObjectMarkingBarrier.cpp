@@ -83,8 +83,8 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
   __ pusha();
   __ movptr(c_rarg0, obj);
   __ lea(c_rarg1, dst);
-  assert( val != noreg, "val cannot be null!!!" );
-  __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  // __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  __ movptr(c_rarg2, val);
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
   __ popa();
 #endif
