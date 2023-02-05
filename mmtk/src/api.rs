@@ -447,8 +447,8 @@ pub extern "C" fn mmtk_set_public_bit(_tls: VMMutatorThread, object: ObjectRefer
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
-    memory_manager::mmtk_publish_object::<OpenJDK>(object);
+pub extern "C" fn mmtk_publish_object(_tls: VMMutatorThread, object: ObjectReference) {
+    memory_manager::mmtk_publish_object::<OpenJDK>(_tls, object);
 }
 
 #[no_mangle]

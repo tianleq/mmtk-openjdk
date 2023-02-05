@@ -178,6 +178,7 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    size_t (*mutator_id)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -209,7 +210,7 @@ extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 
 extern void mmtk_set_public_bit(void* tls, void *object, bool force);
-extern void mmtk_publish_object(void *object);
+extern void mmtk_publish_object(void* tls, void *object);
 extern bool mmtk_is_object_published(void *object);
 
 #ifdef __cplusplus

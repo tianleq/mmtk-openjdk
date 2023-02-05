@@ -104,13 +104,13 @@ void MMTkBarrierSet::resize_covered_region(MemRegion new_region) {
   guarantee(false, "NoBarrier::resize_covered_region not supported");
 }
 
-
 void MMTkBarrierSet::on_thread_destroy(Thread* thread) {
   thread->third_party_heap_mutator.flush();
 }
 
 void MMTkBarrierSet::on_thread_attach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
+  thread->third_party_heap_mutator.mutator_id = thread->osthread()->thread_id();
 }
 
 void MMTkBarrierSet::on_thread_detach(JavaThread* thread) {
