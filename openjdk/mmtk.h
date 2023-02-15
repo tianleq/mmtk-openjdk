@@ -178,7 +178,9 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
-    size_t (*mutator_id)(void *tls);
+    size_t (*native_thread_id)(void *tls);
+    void (*mmtk_request_start)(void *jni_env);
+    void (*mmtk_request_end)(void *jni_env);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -212,6 +214,10 @@ extern void mmtk_harness_end_impl();
 extern void mmtk_set_public_bit(void* tls, void *object, bool force);
 extern void mmtk_publish_object(void* tls, void *object);
 extern bool mmtk_is_object_published(void *object);
+extern void mmtk_request_end_gc(void *tls);
+extern void mmtk_reset_request_statistics(void *tls);
+extern void mmtk_update_request_statistics(void *tls);
+extern void mmtk_write_request_statistics(void *tls);
 
 #ifdef __cplusplus
 }

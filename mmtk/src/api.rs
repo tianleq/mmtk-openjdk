@@ -455,3 +455,33 @@ pub extern "C" fn mmtk_publish_object(_tls: VMMutatorThread, object: ObjectRefer
 pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
     memory_manager::mmtk_is_object_published::<OpenJDK>(object)
 }
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_end_gc(tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_start)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_end)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_reset_request_statistics(tls: VMMutatorThread) {
+    memory_manager::mmtk_reset_request_statistics::<OpenJDK>(tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_update_request_statistics(tls: VMMutatorThread) {
+    memory_manager::mmtk_update_request_statistics::<OpenJDK>(tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_write_request_statistics(tls: VMMutatorThread) {
+    memory_manager::mmtk_write_request_statistics::<OpenJDK>(tls);
+}

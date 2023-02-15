@@ -42,6 +42,11 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
+static Monitor *request_end_gc_lock = new Monitor(Monitor::nonleaf,
+                                                  "mmtk request end gc lock",
+                                                  true,
+                                                  Monitor::_safepoint_check_always);
+
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
@@ -341,9 +346,37 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
   assert(Universe::has_reference_pending_list(), "Reference pending list is empty after swap");
 }
 
-static size_t mmtk_mutator_id(void *tls) {
+static size_t mmtk_native_thread_id(void *tls) {
   Thread *thread = (Thread *) tls;
   return thread->osthread()->thread_id();
+}
+
+static void mmtk_request_start(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->in_request == false, "invalid critical section state (active --> active)");
+  mutator->request_id += 1;
+  mutator->in_request = true;
+  ::mmtk_reset_request_statistics(thread);
+}
+
+static void mmtk_request_end(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+  assert(mutator->in_request == true, "invalid critical section state (false --> false)");
+  mutator->in_request = false;
+
+  // Trigger a gc to find out liveness of request scope objects
+  // Acquire a lock first to make sure only one mutator will trigger this gc 
+  MutexLockerEx locker(request_end_gc_lock);
+  ::mmtk_request_end_gc(thread);
+  ::mmtk_update_request_statistics(thread);
+  // write the statistics to file
+  ::mmtk_write_request_statistics(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -385,5 +418,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
   mmtk_enqueue_references,
-  mmtk_mutator_id
+  mmtk_native_thread_id,
+  mmtk_request_start,
+  mmtk_request_end
 };
