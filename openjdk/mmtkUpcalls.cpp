@@ -50,6 +50,10 @@ static Monitor *request_end_gc_lock = new Monitor(Monitor::nonleaf,
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
+static volatile size_t mmtk_global_request_id = 0;
+
+static const size_t step = 20;
+
 static void mmtk_stop_all_mutators(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure) {
   ClassLoaderDataGraph::clear_claimed_marks();
   CodeCache::gc_prologue();
@@ -359,7 +363,12 @@ static void mmtk_request_start(void *jni_env)
   assert(mutator->in_request == false, "invalid critical section state (active --> active)");
   mutator->request_id += 1;
   mutator->in_request = true;
-  ::mmtk_reset_request_statistics(thread);
+  {
+    MutexLockerEx locker(request_end_gc_lock);
+    mmtk_global_request_id += 1;
+    mutator->global_request_id = mmtk_global_request_id;
+  }
+  if (mutator->global_request_id % step == 1) ::mmtk_reset_request_statistics(thread);
 }
 
 static void mmtk_request_end(void *jni_env)
@@ -372,11 +381,25 @@ static void mmtk_request_end(void *jni_env)
 
   // Trigger a gc to find out liveness of request scope objects
   // Acquire a lock first to make sure only one mutator will trigger this gc 
-  MutexLockerEx locker(request_end_gc_lock);
-  ::mmtk_request_end_gc(thread);
-  ::mmtk_update_request_statistics(thread);
-  // write the statistics to file
-  ::mmtk_write_request_statistics(thread);
+  // request_end_gc_lock must check safepoint, otherwise, when multiple threads 
+  // are contending on this lock, those threads failed to acquire the lock
+  // will be blocked without noticing the vm that they are safe to reach safepoints
+  // causing a deadlock
+  {
+    MutexLockerEx locker(request_end_gc_lock);
+    if (mutator->global_request_id % step == 0) {
+      ::mmtk_request_end_gc(thread);
+      ::mmtk_update_request_statistics(thread);
+      // write the statistics to file
+      ::mmtk_write_request_statistics(thread);
+    }
+  }
+  // MutexLockerEx locker(request_end_gc_lock);
+  // ::mmtk_request_end_gc(thread);
+  // ::mmtk_update_request_statistics(thread);
+  // // write the statistics to file
+  // ::mmtk_write_request_statistics(thread);
+  
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {

@@ -442,8 +442,8 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(_tls: VMMutatorThread, object: ObjectReference, force: bool) {
-    memory_manager::mmtk_set_public_bit(object, force);
+pub extern "C" fn mmtk_set_public_bit(_tls: VMMutatorThread, object: ObjectReference) {
+    memory_manager::mmtk_set_public_bit(object);
 }
 
 #[no_mangle]
