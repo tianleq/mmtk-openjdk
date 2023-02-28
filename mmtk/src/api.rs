@@ -470,18 +470,3 @@ pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
 pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_end)(jni_env) };
 }
-
-#[no_mangle]
-pub extern "C" fn mmtk_reset_request_statistics(tls: VMMutatorThread) {
-    memory_manager::mmtk_reset_request_statistics::<OpenJDK>(tls);
-}
-
-#[no_mangle]
-pub extern "C" fn mmtk_update_request_statistics(tls: VMMutatorThread) {
-    memory_manager::mmtk_update_request_statistics::<OpenJDK>(tls);
-}
-
-#[no_mangle]
-pub extern "C" fn mmtk_write_request_statistics(tls: VMMutatorThread) {
-    memory_manager::mmtk_write_request_statistics::<OpenJDK>(tls);
-}

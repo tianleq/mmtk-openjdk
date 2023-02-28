@@ -215,9 +215,6 @@ extern void mmtk_set_public_bit(void* tls, void *object);
 extern void mmtk_publish_object(void* tls, void *object);
 extern bool mmtk_is_object_published(void *object);
 extern void mmtk_request_end_gc(void *tls);
-extern void mmtk_reset_request_statistics(void *tls);
-extern void mmtk_update_request_statistics(void *tls);
-extern void mmtk_write_request_statistics(void *tls);
 
 #ifdef __cplusplus
 }
