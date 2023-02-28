@@ -27,6 +27,7 @@ public:
 class MMTkPublicObjectMarkingBarrierSetAssembler: public MMTkBarrierSetAssembler {
 protected:
   virtual void object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const override;
+  virtual void generate_c1_write_barrier_runtime_stub(StubAssembler* sasm) const;
 public:
   virtual void arraycopy_epilogue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) override;
 };

@@ -363,12 +363,6 @@ static void mmtk_request_start(void *jni_env)
   assert(mutator->in_request == false, "invalid critical section state (active --> active)");
   mutator->request_id += 1;
   mutator->in_request = true;
-  {
-    MutexLockerEx locker(request_end_gc_lock);
-    mmtk_global_request_id += 1;
-    mutator->global_request_id = mmtk_global_request_id;
-  }
-  if (mutator->global_request_id % step == 1) ::mmtk_reset_request_statistics(thread);
 }
 
 static void mmtk_request_end(void *jni_env)
@@ -385,21 +379,13 @@ static void mmtk_request_end(void *jni_env)
   // are contending on this lock, those threads failed to acquire the lock
   // will be blocked without noticing the vm that they are safe to reach safepoints
   // causing a deadlock
-  {
-    MutexLockerEx locker(request_end_gc_lock);
-    if (mutator->global_request_id % step == 0) {
-      ::mmtk_request_end_gc(thread);
-      ::mmtk_update_request_statistics(thread);
-      // write the statistics to file
-      ::mmtk_write_request_statistics(thread);
-    }
-  }
+  
   // MutexLockerEx locker(request_end_gc_lock);
   // ::mmtk_request_end_gc(thread);
   // ::mmtk_update_request_statistics(thread);
   // // write the statistics to file
   // ::mmtk_write_request_statistics(thread);
-  
+
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
