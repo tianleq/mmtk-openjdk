@@ -92,17 +92,6 @@ struct MMTkMutatorContext {
   unsigned mutator_id;
   bool in_request;
   unsigned request_id;
-  unsigned global_request_id;
-  size_t request_scope_object_size;
-  unsigned request_scope_object_counter;
-  size_t request_scope_public_object_size;
-  unsigned request_scope_public_object_counter;
-  size_t request_scope_live_public_object_size;
-  unsigned request_scope_live_public_object_counter;
-  size_t request_scope_live_private_object_size;
-  unsigned request_scope_live_private_object_counter;
-  unsigned request_scope_write_barrier_counter;
-  unsigned request_scope_write_barrier_slowpath_counter;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 
