@@ -64,8 +64,14 @@ object iterator??!!
 
 MMTkHeap* MMTkHeap::_heap = NULL;
 
-MMTkHeap::MMTkHeap(MMTkCollectorPolicy* policy) : CollectedHeap(), _last_gc_time(0), _collector_policy(policy),  _num_root_scan_tasks(0), _n_workers(0), _gc_lock(new Monitor(Mutex::safepoint, "MMTkHeap::_gc_lock", true, Monitor::_safepoint_check_sometimes))
-// , _par_state_string(StringTable::weak_storage())
+MMTkHeap::MMTkHeap(MMTkCollectorPolicy* policy) :
+  CollectedHeap(),
+  _last_gc_time(0),
+  _collector_policy(policy),
+  _num_root_scan_tasks(0),
+  _n_workers(0),
+  _gc_lock(new Monitor(Mutex::safepoint, "MMTkHeap::_gc_lock", true, Monitor::_safepoint_check_sometimes)),
+  _soft_ref_policy()
 {
   _heap = this;
 }
@@ -74,7 +80,8 @@ jint MMTkHeap::initialize() {
   assert(!UseTLAB , "should disable UseTLAB");
   assert(!UseCompressedOops , "should disable CompressedOops");
   assert(!UseCompressedClassPointers , "should disable UseCompressedClassPointers");
-  const size_t heap_size = collector_policy()->max_heap_byte_size();
+  const size_t min_heap_size = collector_policy()->min_heap_byte_size();
+  const size_t max_heap_size = collector_policy()->max_heap_byte_size();
   //  printf("policy max heap size %zu, min heap size %zu\n", heap_size, collector_policy()->min_heap_byte_size());
 
   // Set options
@@ -83,8 +90,8 @@ jint MMTkHeap::initialize() {
     guarantee(set_options, "Failed to set MMTk options. Please check if the options are valid: %s\n", ThirdPartyHeapOptions);
   }
   // Set heap size
-  bool set_heap_size = mmtk_set_heap_size(heap_size);
-  guarantee(set_heap_size, "Failed to set MMTk heap size. Please check if the heap size is valid: %ld\n", heap_size);
+  bool set_heap_size = mmtk_set_heap_size(min_heap_size, max_heap_size);
+  guarantee(set_heap_size, "Failed to set MMTk heap size. Please check if the heap size is valid: min = %ld, max = %ld\n", min_heap_size, max_heap_size);
 
   openjdk_gc_init(&mmtk_upcalls);
   // Cache the value here. It is a constant depending on the selected plan. The plan won't change from now, so value won't change.
@@ -255,7 +262,7 @@ void MMTkHeap::do_full_collection(bool clear_all_soft_refs) {//later when gc is 
 // Return the CollectorPolicy for the heap
 CollectorPolicy* MMTkHeap::collector_policy() const {return _collector_policy;}//OK
 
-SoftRefPolicy* MMTkHeap::soft_ref_policy() {return _soft_ref_policy;}//OK
+SoftRefPolicy* MMTkHeap::soft_ref_policy() {return &_soft_ref_policy;}//OK
 
 GrowableArray<GCMemoryManager*> MMTkHeap::memory_managers() {//may cause error
 

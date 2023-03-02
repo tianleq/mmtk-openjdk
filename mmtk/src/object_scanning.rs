@@ -1,5 +1,7 @@
-use super::abi::*;
-use super::{OpenJDKEdge, UPCALLS};
+use crate::SINGLETON;
+
+use crate::abi::*;
+use crate::{OpenJDKEdge, UPCALLS};
 use mmtk::util::constants::*;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
@@ -11,7 +13,6 @@ trait OopIterate: Sized {
 }
 
 impl OopIterate for OopMapBlock {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let start = oop.get_field_address(self.offset);
         for i in 0..self.count as usize {
@@ -22,7 +23,6 @@ impl OopIterate for OopMapBlock {
 }
 
 impl OopIterate for InstanceKlass {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let oop_maps = self.nonstatic_oop_maps();
         for map in oop_maps {
@@ -32,7 +32,6 @@ impl OopIterate for InstanceKlass {
 }
 
 impl OopIterate for InstanceMirrorKlass {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         self.instance_klass.oop_iterate(oop, closure);
         // if (Devirtualizer::do_metadata(closure)) {
@@ -73,7 +72,6 @@ impl OopIterate for InstanceMirrorKlass {
 }
 
 impl OopIterate for InstanceClassLoaderKlass {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         self.instance_klass.oop_iterate(oop, closure);
         // if (Devirtualizer::do_metadata(closure)) {
@@ -87,7 +85,6 @@ impl OopIterate for InstanceClassLoaderKlass {
 }
 
 impl OopIterate for ObjArrayKlass {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let array = unsafe { oop.as_array_oop() };
         for oop in unsafe { array.data::<Oop>(BasicType::T_OBJECT) } {
@@ -97,7 +94,6 @@ impl OopIterate for ObjArrayKlass {
 }
 
 impl OopIterate for TypeArrayKlass {
-    #[inline]
     fn oop_iterate(&self, _oop: Oop, _closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         // Performance tweak: We skip processing the klass pointer since all
         // TypeArrayKlasses are guaranteed processed via the null class loader.
@@ -105,7 +101,6 @@ impl OopIterate for TypeArrayKlass {
 }
 
 impl OopIterate for InstanceRefKlass {
-    #[inline]
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         use crate::abi::*;
         use crate::api::{add_phantom_candidate, add_soft_candidate, add_weak_candidate};
@@ -133,12 +128,9 @@ impl OopIterate for InstanceRefKlass {
 }
 
 impl InstanceRefKlass {
-    #[inline]
     fn should_scan_weak_refs() -> bool {
-        use SINGLETON;
         !*SINGLETON.get_options().no_reference_types
     }
-    #[inline]
     fn process_ref_as_strong(oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let referent_addr = Self::referent_address(oop);
         closure.visit_edge(referent_addr);
@@ -154,7 +146,6 @@ fn oop_iterate_slow(oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>, tls: 
     }
 }
 
-#[inline]
 fn oop_iterate(oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
     let klass_id = oop.klass.id;
     debug_assert!(
@@ -191,7 +182,6 @@ fn oop_iterate(oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
     }
 }
 
-#[inline]
 pub fn scan_object(
     object: ObjectReference,
     closure: &mut impl EdgeVisitor<OpenJDKEdge>,

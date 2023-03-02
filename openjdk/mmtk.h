@@ -23,6 +23,7 @@ extern const uintptr_t GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 extern const uintptr_t GLOBAL_ALLOC_BIT_ADDRESS;
 extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
+extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
 
 extern const char* get_mmtk_version();
 
@@ -78,6 +79,7 @@ struct AllocatorSelector {
 #define TAG_MALLOC                    2
 #define TAG_IMMIX                     3
 #define TAG_MARK_COMPACT              4
+#define TAG_FREE_LIST                 5
 
 extern AllocatorSelector get_allocator_mapping(int allocator);
 extern size_t get_max_non_los_default_alloc_bytes();
@@ -185,7 +187,7 @@ typedef struct {
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
 extern bool openjdk_is_gc_initialized();
 
-extern bool mmtk_set_heap_size(size_t size);
+extern bool mmtk_set_heap_size(size_t min, size_t max);
 
 extern size_t used_bytes();
 extern void* starting_heap_address();

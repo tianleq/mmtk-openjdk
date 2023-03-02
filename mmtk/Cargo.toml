@@ -1,9 +1,10 @@
 [package]
 name = "mmtk_openjdk"
-version = "0.15.0"
+version = "0.17.0"
 authors = [" <>"]
-rust-version = "1.57.0"
+rust-version = "1.61.0"
 build = "build.rs"
+edition = "2021"
 
 [lib]
 name = "mmtk_openjdk"
@@ -17,7 +18,7 @@ lto = true
 [package.metadata.openjdk]
 # Our CI matches the following line and extract mmtk/openjdk. If this line is updated, please check ci yaml files and make sure it works.
 openjdk_repo = "https://github.com/mmtk/openjdk.git"
-openjdk_version = "c82e5c44adced4383162826c2c3933a83cfb139b"
+openjdk_version = "cba66754f2ec16fb67035647bafbc131ad4fbcbd"
 
 [dependencies]
 libc = "0.2"
@@ -29,7 +30,7 @@ once_cell = "1.10.0"
 # - change branch
 # - change repo name
 # But other changes including adding/removing whitespaces in commented lines may break the CI.
-# mmtk = { git = "https://github.com/mmtk/mmtk-core.git", rev = "f82848847a6392537fec6b914d7ad95fbf28b0a2" }
+mmtk = { git = "https://github.com/mmtk/mmtk-core.git", rev = "08fd8ab0cfaa240a6e9a401afaec963ec0de8be5" }
 # Uncomment the following to build locally
 mmtk = { path = "../../mmtk-core" }
 
@@ -58,6 +59,6 @@ malloc_mark_sweep = ["mmtk/malloc_mark_sweep"]
 nogc = []
 semispace = []
 gencopy = []
-marksweep = ["mmtk/malloc_mark_sweep"]
+marksweep = []
 pageprotect = []
 immix = []
