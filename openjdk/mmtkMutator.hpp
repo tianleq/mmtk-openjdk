@@ -88,10 +88,6 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
-  size_t native_thread_id;
-  unsigned mutator_id;
-  bool in_request;
-  unsigned request_id;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

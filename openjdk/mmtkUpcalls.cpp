@@ -350,19 +350,12 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
   assert(Universe::has_reference_pending_list(), "Reference pending list is empty after swap");
 }
 
-static size_t mmtk_native_thread_id(void *tls) {
-  Thread *thread = (Thread *) tls;
-  return thread->osthread()->thread_id();
-}
-
 static void mmtk_request_start(void *jni_env)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-  assert(mutator->in_request == false, "invalid critical section state (active --> active)");
-  mutator->request_id += 1;
-  mutator->in_request = true;
+  // assert(mutator->in_request == false, "invalid critical section state (active --> active)");
 }
 
 static void mmtk_request_end(void *jni_env)
@@ -370,8 +363,7 @@ static void mmtk_request_end(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-  assert(mutator->in_request == true, "invalid critical section state (false --> false)");
-  mutator->in_request = false;
+  // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
 
   // Trigger a gc to find out liveness of request scope objects
   // Acquire a lock first to make sure only one mutator will trigger this gc 
@@ -427,7 +419,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
   mmtk_enqueue_references,
-  mmtk_native_thread_id,
   mmtk_request_start,
   mmtk_request_end
 };

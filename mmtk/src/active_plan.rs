@@ -43,10 +43,6 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
         }
     }
 
-    fn native_thread_id(tls: VMMutatorThread) -> usize {
-        unsafe { ((*UPCALLS).native_thread_id)(tls) }
-    }
-
     fn number_of_mutators() -> usize {
         unsafe { ((*UPCALLS).number_of_mutators)() }
     }

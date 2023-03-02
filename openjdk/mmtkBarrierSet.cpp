@@ -110,7 +110,6 @@ void MMTkBarrierSet::on_thread_destroy(Thread* thread) {
 
 void MMTkBarrierSet::on_thread_attach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
-  thread->third_party_heap_mutator.native_thread_id = thread->osthread()->thread_id();
 }
 
 void MMTkBarrierSet::on_thread_detach(JavaThread* thread) {
