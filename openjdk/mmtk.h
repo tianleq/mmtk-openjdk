@@ -215,7 +215,7 @@ extern void mmtk_harness_end_impl();
 extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
 extern bool mmtk_is_object_published(void *object);
-extern void mmtk_request_end_gc(void *tls);
+// extern void mmtk_request_end_gc(void *tls);
 
 #ifdef __cplusplus
 }

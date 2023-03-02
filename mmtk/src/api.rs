@@ -462,10 +462,10 @@ pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
     memory_manager::mmtk_is_object_published::<OpenJDK>(object)
 }
 
-#[no_mangle]
-pub extern "C" fn mmtk_request_end_gc(tls: VMMutatorThread) {
-    memory_manager::mmtk_handle_user_triggered_gc::<OpenJDK>(&SINGLETON, tls);
-}
+// #[no_mangle]
+// pub extern "C" fn mmtk_request_end_gc(tls: VMMutatorThread) {
+//     memory_manager::mmtk_handle_user_triggered_gc::<OpenJDK>(&SINGLETON, tls);
+// }
 
 #[no_mangle]
 pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {

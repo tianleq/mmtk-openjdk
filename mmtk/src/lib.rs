@@ -119,7 +119,7 @@ pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
 
 #[no_mangle]
 pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
-    crate::mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
+    mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
 
 #[derive(Default)]
 pub struct OpenJDK;
