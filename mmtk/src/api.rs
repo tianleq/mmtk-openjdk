@@ -443,7 +443,7 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) {
-    memory_manager::mmtk_set_public_bit(object);
+    memory_manager::mmtk_set_public_bit::<OpenJDK>(object);
 }
 
 #[no_mangle]
