@@ -85,9 +85,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::arraycopy_epilogue(MacroAssembl
 void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_write_barrier_runtime_stub(StubAssembler* sasm) const {
   __ prologue("mmtk_write_barrier", false);
 
-  Address store_addr(rbp, 4*BytesPerWord);
-
-  Label done, runtime;
+  Label done;
 
   __ push(c_rarg0);
   __ push(c_rarg1);
@@ -97,8 +95,6 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_write_barrier_runti
   __ load_parameter(0, c_rarg0);
   __ load_parameter(1, c_rarg1);
   __ load_parameter(2, c_rarg2);
-
-  __ bind(runtime);
 
   __ save_live_registers_no_oop_map(true);
 
