@@ -2,16 +2,28 @@
 #include "mmtkPublicObjectMarkingBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 
-void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
+
+void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call(void* src, void* slot, void* target) {
+  // if target is null, nothing needs to be published
   if (!target) return;
+  // Now check target/value, only go to slow-path when target is private/has not been published
+  intptr_t addr = (intptr_t) (void*) target;
+  uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
+  intptr_t shift = (addr >> 3) & 0b111;
+  uint8_t byte_val = *meta_addr;
+  if (((byte_val >> shift) & 1) != 1) {
+    MMTkBarrierSetRuntime::object_reference_write_slow_call(src, slot, target);
+  }
+}
+
+void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
 #if MMTK_ENABLE_BARRIER_FASTPATH
   intptr_t addr = (intptr_t) (void*) src;
   uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
   intptr_t shift = (addr >> 3) & 0b111;
   uint8_t byte_val = *meta_addr;
   if (((byte_val >> shift) & 1) == 1) {
-    // MMTkObjectBarrierSetRuntime::object_reference_write_pre_slow()((void*) src);
-    object_reference_write_slow_call((void*) src, (void*) slot, (void*) target);
+    MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call((void*) src, (void*) slot, (void*) target);
   }
 #else
   object_reference_write_pre_call((void*) src, (void*) slot, (void*) target);
@@ -53,7 +65,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
   __ movptr(c_rarg0, obj);
   __ lea(c_rarg1, dst);
   __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
-  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
+  __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
   __ bind(done);
   __ popa();
 #else
@@ -103,7 +115,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_write_barrier_runti
   __ save_live_registers_no_oop_map(true);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
-  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
+  __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
 #else
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
 #endif
@@ -218,7 +230,7 @@ void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* k
 
   __ if_then(result, BoolTest::ne, zero, unlikely); {
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), "mmtk_barrier_call", src, slot, val);
+    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "mmtk_barrier_call", src, slot, val);
   } __ end_if();
 #else
   const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);

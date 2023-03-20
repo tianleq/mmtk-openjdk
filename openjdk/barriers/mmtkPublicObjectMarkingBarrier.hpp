@@ -17,6 +17,8 @@ const intptr_t PUBLIC_BIT_BASE_ADDRESS = (intptr_t) GLOBAL_PUBLIC_BIT_ADDRESS;
 
 class MMTkPublicObjectMarkingBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
+  /// Generic mid-path. Called by fast-paths.
+  static void object_reference_write_mid_call(void* src, void* slot, void* target);
   // Interfaces called by `MMTkBarrierSet::AccessBarrier`
   virtual void object_reference_write_pre(oop src, oop* slot, oop target) const override;
   virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const override {
