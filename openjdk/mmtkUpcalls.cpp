@@ -54,6 +54,7 @@ static Monitor *thread_local_gc_lock = new Monitor(Monitor::nonleaf,
                                                   "mmtk thread-local gc lock",
                                                   true,
                                                   Monitor::_safepoint_check_always);
+static volatile void *thread_in_local_gc = NULL;
 
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
@@ -180,9 +181,14 @@ static void mmtk_block_for_thread_local_gc() {
   assert(Thread::current()->is_Java_thread(), "Only Java thread can block for thread-local gc");
   log_debug(gc)("Thread (id=%d) will block waiting for thread-local GC to finish.", current->osthread()->thread_id());
   {
+      current->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
       // Once this thread acquires the lock and wait, the VM will consider this thread to be "in safe point".
       MutexLocker locker(thread_local_gc_lock);
-      current->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
+      // Another mutator thread is executing local gc, so cannot trigger another one
+      while (thread_in_local_gc && thread_in_local_gc != current) {
+        thread_local_gc_lock->wait();
+      }
+      thread_in_local_gc = current;
       while (current->third_party_heap_mutator.thread_local_gc_status == LOCAL_GC_ACTIVE) {
         // wait() may wake up spuriously, but the authoritative condition for unblocking is
         // thread_local_gc_status being reset.
@@ -198,6 +204,7 @@ static void mmtk_resume_from_thread_local_gc(void *tls) {
   JavaThread *thread = (JavaThread *) tls;
   {
     MutexLockerEx locker(thread_local_gc_lock, true);
+    thread_in_local_gc = NULL;
     thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_INACTIVE;
     thread_local_gc_lock->notify_all();
   }  
@@ -444,13 +451,8 @@ static void mmtk_request_end(void *jni_env)
   // are contending on this lock, those threads failed to acquire the lock
   // will be blocked without noticing the vm that they are safe to reach safepoints
   // causing a deadlock
-  
-  // MutexLockerEx locker(request_end_gc_lock);
-  // ::mmtk_request_end_gc(thread);
-  // ::mmtk_update_request_statistics(thread);
-  // // write the statistics to file
-  // ::mmtk_write_request_statistics(thread);
 
+  ::mmtk_request_local_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
