@@ -44,6 +44,7 @@ struct LargeObjectAllocator {
 
 struct ImmixAllocator {
   void* tls;
+  uint32_t mutator_id;
   void* cursor;
   void* limit;
   void* immix_space;
@@ -111,6 +112,8 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+  uint32_t thread_local_gc_status;
+  uint32_t mutator_id;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

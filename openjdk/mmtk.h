@@ -146,6 +146,9 @@ typedef struct {
     void (*resume_mutators) (void *tls);
     void (*spawn_gc_thread) (void *tls, int kind, void *ctx);
     void (*block_for_gc) ();
+    void (*stop_mutator)(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure);
+    void (*block_for_thread_local_gc)();
+    void (*resume_from_thread_local_gc)(void *tls);
     void (*out_of_memory) (void *tls, MMTkAllocationError err_kind);
     void* (*get_next_mutator) ();
     void (*reset_mutator_iterator) ();
@@ -215,7 +218,7 @@ extern void mmtk_harness_end_impl();
 extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
 extern bool mmtk_is_object_published(void *object);
-// extern void mmtk_request_end_gc(void *tls);
+extern void mmtk_request_local_gc(void *tls);
 
 #ifdef __cplusplus
 }

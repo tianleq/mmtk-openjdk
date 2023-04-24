@@ -79,7 +79,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
 #endif
 }
 
-void MMTkPublicObjectMarkingBarrierSetAssembler::arraycopy_epilogue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) {
+void MMTkPublicObjectMarkingBarrierSetAssembler::arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) {
   const bool dest_uninitialized = (decorators & IS_DEST_UNINITIALIZED) != 0;
   if ((type == T_OBJECT || type == T_ARRAY) && !dest_uninitialized) {
     __ pusha();
