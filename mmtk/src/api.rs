@@ -462,7 +462,7 @@ pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
     memory_manager::mmtk_is_object_published::<OpenJDK>(object)
 }
 
-// #[no_mangle]
+#[no_mangle]
 pub extern "C" fn mmtk_request_local_gc(tls: VMMutatorThread) {
     memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, tls);
 }
