@@ -53,7 +53,7 @@ const u_int32_t LOCAL_GC_INACTIVE = 0;
 static Monitor *thread_local_gc_lock = new Monitor(Monitor::nonleaf,
                                                   "mmtk thread-local gc lock",
                                                   true,
-                                                  Monitor::_safepoint_check_always);
+                                                  Monitor::_safepoint_check_sometimes);
 static volatile void *thread_in_local_gc = NULL;
 
 // Note: This counter must be accessed using the Atomic class.
@@ -136,28 +136,28 @@ static void mmtk_spawn_gc_thread(void* tls, int kind, void* ctx) {
 }
 
 static void mmtk_thread_local_gc_prologue() {
-  ClassLoaderDataGraph::clear_claimed_marks();
-  CodeCache::gc_prologue();
+  // ClassLoaderDataGraph::clear_claimed_marks();
+  // CodeCache::gc_prologue();
 #if COMPILER2_OR_JVMCI
   DerivedPointerTable::clear();
 #endif
   // In a thread-local gc, only the thread's stack gets scanned
   // so probably no need to call the following
-  nmethod::oops_do_marking_prologue(); 
+  // nmethod::oops_do_marking_prologue(); 
 }
 
 static void mmtk_thread_local_gc_epilogue() {
-  nmethod::oops_do_marking_epilogue();
+  // nmethod::oops_do_marking_epilogue();
   // ClassLoaderDataGraph::purge();
-  CodeCache::gc_epilogue();
-  JvmtiExport::gc_epilogue();
+  // CodeCache::gc_epilogue();
+  // JvmtiExport::gc_epilogue();
 #if COMPILER2_OR_JVMCI
   DerivedPointerTable::update_pointers();
 #endif
 }
 
 // This function is called by gc thread
-static void mmtk_stop_mutator(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure) {
+static void mmtk_scan_mutator(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure) {
   mmtk_thread_local_gc_prologue();
   JavaThread *cur = (JavaThread *) tls;
   {
@@ -173,6 +173,20 @@ static void mmtk_stop_mutator(void *tls, bool scan_mutators_in_safepoint, Mutato
   }
 }
 
+static void mmtk_request_local_gc_impl(JavaThread *thread) {
+  
+  {
+    MutexLocker locker(thread_local_gc_lock);
+    // Another mutator thread is executing local gc, so cannot trigger another one
+    while (thread_in_local_gc && thread_in_local_gc != thread) {
+      thread_local_gc_lock->wait();
+    }
+    thread_in_local_gc = thread;
+    thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
+  }
+  ::mmtk_request_local_gc(thread);
+}
+
 // This function is called by mutator thread
 // to block itself
 static void mmtk_block_for_thread_local_gc() {
@@ -181,14 +195,9 @@ static void mmtk_block_for_thread_local_gc() {
   assert(Thread::current()->is_Java_thread(), "Only Java thread can block for thread-local gc");
   log_debug(gc)("Thread (id=%d) will block waiting for thread-local GC to finish.", current->osthread()->thread_id());
   {
-      current->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
       // Once this thread acquires the lock and wait, the VM will consider this thread to be "in safe point".
       MutexLocker locker(thread_local_gc_lock);
-      // Another mutator thread is executing local gc, so cannot trigger another one
-      while (thread_in_local_gc && thread_in_local_gc != current) {
-        thread_local_gc_lock->wait();
-      }
-      thread_in_local_gc = current;
+      assert(thread_in_local_gc == current, "Thread: %p is not the one that triggers the local gc. Thread %p triggered.", current, thread_in_local_gc);
       while (current->third_party_heap_mutator.thread_local_gc_status == LOCAL_GC_ACTIVE) {
         // wait() may wake up spuriously, but the authoritative condition for unblocking is
         // thread_local_gc_status being reset.
@@ -444,15 +453,9 @@ static void mmtk_request_end(void *jni_env)
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
-
-  // Trigger a gc to find out liveness of request scope objects
-  // Acquire a lock first to make sure only one mutator will trigger this gc 
-  // request_end_gc_lock must check safepoint, otherwise, when multiple threads 
-  // are contending on this lock, those threads failed to acquire the lock
-  // will be blocked without noticing the vm that they are safe to reach safepoints
-  // causing a deadlock
-
-  ::mmtk_request_local_gc(thread);
+  // Trigger a local gc
+  mmtk_request_local_gc_impl(thread);
+  ::mmtk_request_global_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -460,7 +463,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_resume_mutators,
   mmtk_spawn_gc_thread,
   mmtk_block_for_gc,
-  mmtk_stop_mutator,
+  mmtk_scan_mutator,
   mmtk_block_for_thread_local_gc,
   mmtk_resume_from_thread_local_gc,
   mmtk_out_of_memory,

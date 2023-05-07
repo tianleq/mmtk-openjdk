@@ -61,7 +61,7 @@ pub struct OpenJDK_Upcalls {
     pub resume_mutators: extern "C" fn(tls: VMWorkerThread),
     pub spawn_gc_thread: extern "C" fn(tls: VMThread, kind: libc::c_int, ctx: *mut libc::c_void),
     pub block_for_gc: extern "C" fn(),
-    pub stop_mutator: extern "C" fn(
+    pub scan_mutator: extern "C" fn(
         tls: VMMutatorThread,
         scan_mutators_in_safepoint: bool,
         closure: MutatorClosure,

@@ -449,7 +449,7 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) {
-    memory_manager::mmtk_set_public_bit::<OpenJDK>(object);
+    memory_manager::mmtk_set_public_bit::<OpenJDK>(&SINGLETON, object);
 }
 
 #[no_mangle]
@@ -465,6 +465,11 @@ pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
 #[no_mangle]
 pub extern "C" fn mmtk_request_local_gc(tls: VMMutatorThread) {
     memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_global_gc::<OpenJDK>(&SINGLETON, tls);
 }
 
 #[no_mangle]

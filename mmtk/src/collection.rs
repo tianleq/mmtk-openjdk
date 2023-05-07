@@ -64,7 +64,7 @@ impl Collection<OpenJDK> for VMCollection {
         }
     }
 
-    fn stop_mutator<F>(tls: VMMutatorThread, mut mutator_visitor: F)
+    fn scan_mutator<F>(tls: VMMutatorThread, mut mutator_visitor: F)
     where
         F: FnMut(&'static mut Mutator<OpenJDK>),
     {
@@ -72,7 +72,7 @@ impl Collection<OpenJDK> for VMCollection {
             <OpenJDK as VMBinding>::VMScanning::SCAN_MUTATORS_IN_SAFEPOINT;
 
         unsafe {
-            ((*UPCALLS).stop_mutator)(
+            ((*UPCALLS).scan_mutator)(
                 tls,
                 scan_mutators_in_safepoint,
                 to_mutator_closure(&mut mutator_visitor),
