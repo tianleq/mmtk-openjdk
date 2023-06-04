@@ -12,6 +12,7 @@ use mmtk::MutatorContext;
 pub struct VMScanning {}
 
 const WORK_PACKET_CAPACITY: usize = 4096;
+const BUFFER_SIZE: usize = 1 << 16;
 
 extern "C" fn report_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
     ptr: *mut Address,
@@ -28,6 +29,27 @@ extern "C" fn report_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
         // TODO: Use Vec::into_raw_parts() when the method is available.
         use std::mem::ManuallyDrop;
         let new_vec = Vec::with_capacity(WORK_PACKET_CAPACITY);
+        let mut me = ManuallyDrop::new(new_vec);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    };
+    NewBuffer { ptr, capacity }
+}
+
+extern "C" fn thread_local_process_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
+    ptr: *mut Address,
+    length: usize,
+    capacity: usize,
+    factory_ptr: *mut libc::c_void,
+) -> NewBuffer {
+    if !ptr.is_null() {
+        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let factory: &mut F = unsafe { &mut *(factory_ptr as *mut F) };
+        factory.create_process_edge_roots_work(buf);
+    }
+    let (ptr, _, capacity) = {
+        // TODO: Use Vec::into_raw_parts() when the method is available.
+        use std::mem::ManuallyDrop;
+        let new_vec = Vec::with_capacity(BUFFER_SIZE);
         let mut me = ManuallyDrop::new(new_vec);
         (me.as_mut_ptr(), me.len(), me.capacity())
     };
@@ -72,6 +94,23 @@ impl Scanning<OpenJDK> for VMScanning {
         let tls = mutator.get_tls();
         unsafe {
             ((*UPCALLS).scan_thread_roots)(to_edges_closure(&mut factory), tls);
+        }
+    }
+
+    fn thread_local_scan_thread_root(
+        _tls: VMWorkerThread,
+        mutator: &'static mut Mutator<OpenJDK>,
+        mut factory: impl RootsWorkFactory<OpenJDKEdge>,
+    ) {
+        let tls = mutator.get_tls();
+        unsafe {
+            ((*UPCALLS).scan_thread_roots)(
+                EdgesClosure {
+                    func: thread_local_process_edges_and_renew_buffer::<F>,
+                    data: factory as *mut F as *mut libc::c_void,
+                },
+                tls,
+            );
         }
     }
 

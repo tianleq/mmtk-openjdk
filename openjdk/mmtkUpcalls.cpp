@@ -175,15 +175,15 @@ static void mmtk_scan_mutator(void *tls, bool scan_mutators_in_safepoint, Mutato
 
 static void mmtk_request_local_gc_impl(JavaThread *thread) {
   
-  {
-    MutexLocker locker(thread_local_gc_lock);
-    // Another mutator thread is executing local gc, so cannot trigger another one
-    while (thread_in_local_gc && thread_in_local_gc != thread) {
-      thread_local_gc_lock->wait();
-    }
-    thread_in_local_gc = thread;
-    thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
-  }
+  // {
+  //   MutexLocker locker(thread_local_gc_lock);
+  //   // Another mutator thread is executing local gc, so cannot trigger another one
+  //   while (thread_in_local_gc && thread_in_local_gc != thread) {
+  //     thread_local_gc_lock->wait();
+  //   }
+  //   thread_in_local_gc = thread;
+  //   thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
+  // }
   ::mmtk_request_local_gc(thread);
 }
 
@@ -455,7 +455,7 @@ static void mmtk_request_end(void *jni_env)
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
   // Trigger a local gc
   mmtk_request_local_gc_impl(thread);
-  ::mmtk_request_global_gc(thread);
+  // ::mmtk_request_global_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
