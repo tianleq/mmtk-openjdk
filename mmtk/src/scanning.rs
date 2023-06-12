@@ -102,6 +102,36 @@ impl Scanning<OpenJDK> for VMScanning {
         }
     }
 
+    fn single_thread_scan_vm_specific_roots(
+        _tls: VMWorkerThread,
+        factory: impl RootsWorkFactory<OpenJDKEdge>,
+    ) {
+        memory_manager::add_local_work_packets(
+            &SINGLETON,
+            WorkBucketStage::Prepare,
+            vec![
+                Box::new(ScanUniverseRoots::new(factory.clone())) as _,
+                Box::new(ScanJNIHandlesRoots::new(factory.clone())) as _,
+                Box::new(ScanObjectSynchronizerRoots::new(factory.clone())) as _,
+                Box::new(ScanManagementRoots::new(factory.clone())) as _,
+                Box::new(ScanJvmtiExportRoots::new(factory.clone())) as _,
+                Box::new(ScanAOTLoaderRoots::new(factory.clone())) as _,
+                Box::new(ScanSystemDictionaryRoots::new(factory.clone())) as _,
+                Box::new(ScanCodeCacheRoots::new(factory.clone())) as _,
+                Box::new(ScanStringTableRoots::new(factory.clone())) as _,
+                Box::new(ScanClassLoaderDataGraphRoots::new(factory.clone())) as _,
+                Box::new(ScanWeakProcessorRoots::new(factory.clone())) as _,
+            ],
+        );
+        if !(Self::SCAN_MUTATORS_IN_SAFEPOINT && Self::SINGLE_THREAD_MUTATOR_SCANNING) {
+            memory_manager::add_local_work_packet(
+                &SINGLETON,
+                WorkBucketStage::Prepare,
+                ScanVMThreadRoots::new(factory),
+            );
+        }
+    }
+
     fn supports_return_barrier() -> bool {
         unimplemented!()
     }
