@@ -273,6 +273,11 @@ pub extern "C" fn mmtk_harness_end_impl() {
 }
 
 #[no_mangle]
+pub extern "C" fn mmtk_handle_user_collection_request_with_single_thread(tls: VMMutatorThread) {
+    memory_manager::handle_user_collection_request::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
 // We trust the name/value pointer is valid.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn process(name: *const c_char, value: *const c_char) -> bool {

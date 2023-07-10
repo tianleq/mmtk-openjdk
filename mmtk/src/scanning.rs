@@ -108,7 +108,7 @@ impl Scanning<OpenJDK> for VMScanning {
     ) {
         memory_manager::add_local_work_packets(
             &SINGLETON,
-            WorkBucketStage::Prepare,
+            WorkBucketStage::Unconstrained,
             vec![
                 Box::new(ScanUniverseRoots::new(factory.clone())) as _,
                 Box::new(ScanJNIHandlesRoots::new(factory.clone())) as _,
@@ -126,7 +126,7 @@ impl Scanning<OpenJDK> for VMScanning {
         if !(Self::SCAN_MUTATORS_IN_SAFEPOINT && Self::SINGLE_THREAD_MUTATOR_SCANNING) {
             memory_manager::add_local_work_packet(
                 &SINGLETON,
-                WorkBucketStage::Prepare,
+                WorkBucketStage::Unconstrained,
                 ScanVMThreadRoots::new(factory),
             );
         }
