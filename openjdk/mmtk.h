@@ -21,6 +21,7 @@ typedef enum {
 extern const uintptr_t GLOBAL_SIDE_METADATA_BASE_ADDRESS;
 extern const uintptr_t GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 extern const uintptr_t VO_BIT_ADDRESS;
+extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
 
@@ -148,6 +149,9 @@ typedef struct {
     void (*resume_mutators) (void *tls);
     void (*spawn_gc_thread) (void *tls, int kind, void *ctx);
     void (*block_for_gc) ();
+    void (*stop_mutator)(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure);
+    void (*block_for_thread_local_gc)();
+    void (*resume_from_thread_local_gc)(void *tls);
     void (*out_of_memory) (void *tls, MMTkAllocationError err_kind);
     void (*get_mutators) (MutatorClosure closure);
     void (*scan_object) (void* trace, void* object, void* tls);
@@ -181,6 +185,8 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    void (*mmtk_request_start)(void *jni_env);
+    void (*mmtk_request_end)(void *jni_env);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -210,6 +216,12 @@ extern void add_phantom_candidate(void* ref, void* referent);
 
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
+
+extern void mmtk_set_public_bit(void *object);
+extern void mmtk_publish_object(void *object);
+extern bool mmtk_is_object_published(void *object);
+extern void mmtk_request_local_gc(void *tls);
+extern void mmtk_request_global_gc(void *tls);
 
 #ifdef __cplusplus
 }

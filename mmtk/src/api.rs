@@ -24,6 +24,8 @@ use std::sync::atomic::Ordering;
 static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarrier").unwrap());
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
+static PUBLIC_OBJECT_MARKING_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("PublicObjectMarkingBarrier").unwrap());
 
 #[no_mangle]
 pub extern "C" fn get_mmtk_version() -> *const c_char {
@@ -35,6 +37,7 @@ pub extern "C" fn mmtk_active_barrier() -> *const c_char {
     match SINGLETON.get_plan().constraints().barrier {
         BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
         BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+        BarrierSelector::PublicObjectMarkingBarrier => PUBLIC_OBJECT_MARKING_BARRIER.as_ptr(),
         // In case we have more barriers in mmtk-core.
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
@@ -456,4 +459,39 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
             Ordering::Relaxed,
         );
     }
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) {
+    memory_manager::mmtk_set_public_bit::<OpenJDK>(&SINGLETON, object);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+    memory_manager::mmtk_publish_object::<OpenJDK>(&SINGLETON, object);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+    memory_manager::mmtk_is_object_published::<OpenJDK>(object)
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_local_gc(tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_global_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_start)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_end)(jni_env) };
 }

@@ -40,6 +40,34 @@ impl Collection<OpenJDK> for VMCollection {
         }
     }
 
+    fn scan_mutator<F>(tls: VMMutatorThread, mut mutator_visitor: F)
+    where
+        F: FnMut(&'static mut Mutator<OpenJDK>),
+    {
+        let scan_mutators_in_safepoint =
+            <OpenJDK as VMBinding>::VMScanning::SCAN_MUTATORS_IN_SAFEPOINT;
+
+        unsafe {
+            ((*UPCALLS).scan_mutator)(
+                tls,
+                scan_mutators_in_safepoint,
+                to_mutator_closure(&mut mutator_visitor),
+            );
+        }
+    }
+
+    fn block_for_thread_local_gc(_tls: VMMutatorThread) {
+        unsafe {
+            ((*UPCALLS).block_for_thread_local_gc)();
+        }
+    }
+
+    fn resume_from_thread_local_gc(tls: VMMutatorThread) {
+        unsafe {
+            ((*UPCALLS).resume_from_thread_local_gc)(tls);
+        }
+    }
+
     fn spawn_gc_thread(tls: VMThread, ctx: GCThreadContext<OpenJDK>) {
         let (ctx_ptr, kind) = match ctx {
             GCThreadContext::Controller(c) => (
