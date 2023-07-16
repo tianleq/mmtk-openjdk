@@ -175,15 +175,15 @@ static void mmtk_scan_mutator(void *tls, bool scan_mutators_in_safepoint, Mutato
 
 static void mmtk_request_local_gc_impl(JavaThread *thread) {
   
-  // {
-  //   MutexLocker locker(thread_local_gc_lock);
-  //   // Another mutator thread is executing local gc, so cannot trigger another one
-  //   while (thread_in_local_gc && thread_in_local_gc != thread) {
-  //     thread_local_gc_lock->wait();
-  //   }
-  //   thread_in_local_gc = thread;
-  //   thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
-  // }
+  {
+    MutexLocker locker(thread_local_gc_lock);
+    // Another mutator thread is executing local gc, so cannot trigger another one
+    while (thread_in_local_gc && thread_in_local_gc != thread) {
+      thread_local_gc_lock->wait();
+    }
+    thread_in_local_gc = thread;
+    thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
+  }
   ::mmtk_request_local_gc(thread);
 }
 
