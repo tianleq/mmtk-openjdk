@@ -162,7 +162,7 @@ static void mmtk_scan_mutator(void *tls, bool scan_mutators_in_safepoint, Mutato
   JavaThread *cur = (JavaThread *) tls;
   {
     MutexLocker locker(thread_local_gc_lock);
-    if (cur->third_party_heap_mutator.thread_local_gc_status != 1) {
+    if (cur->third_party_heap_mutator.thread_local_gc_status != LOCAL_GC_ACTIVE) {
       // This function is executed by the gc thread,
       // the mutator triggers the local gc should have blocked itself
       assert(false, "Mutator %p has not been stopped", tls);

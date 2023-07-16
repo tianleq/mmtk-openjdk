@@ -51,7 +51,7 @@ impl Collection<OpenJDK> for VMCollection {
             ((*UPCALLS).scan_mutator)(
                 tls,
                 scan_mutators_in_safepoint,
-                to_mutator_closure(&mut mutator_visitor),
+                MutatorClosure::from_rust_closure(&mut mutator_visitor),
             );
         }
     }
