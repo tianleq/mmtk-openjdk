@@ -125,6 +125,8 @@ pub struct OpenJDK_Upcalls {
     pub enqueue_references: extern "C" fn(objects: *const ObjectReference, len: usize),
     pub request_start: extern "C" fn(jni_env: *const c_void),
     pub request_end: extern "C" fn(jni_env: *const c_void),
+    pub thread_local_scan_roots_of_mutator_threads:
+        extern "C" fn(closure: EdgesClosure, tls: VMMutatorThread),
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();
@@ -201,3 +203,7 @@ lazy_static! {
 
 /// A counter tracking the total size of the `CODE_CACHE_ROOTS`.
 static CODE_CACHE_ROOTS_SIZE: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(feature = "extra_header")]
+#[no_mangle]
+pub static MMTK_EXTRA_HEADER_BYTES: usize = <OpenJDK as VMBinding>::EXTRA_HEADER_BYTES;

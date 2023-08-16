@@ -24,6 +24,9 @@ extern const uintptr_t VO_BIT_ADDRESS;
 extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
+#ifdef MMTK_ENABLE_EXTRA_HEADER
+extern const size_t MMTK_EXTRA_HEADER_BYTES;
+#endif
 
 extern const char* get_mmtk_version();
 
@@ -90,7 +93,7 @@ extern size_t get_max_non_los_default_alloc_bytes();
 /**
  * Finalization
  */
-extern void add_finalizer(void* obj);
+extern void add_finalizer(void* obj, uint32_t thread_id);
 extern void* get_finalized_object();
 
 /**
@@ -187,6 +190,7 @@ typedef struct {
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_request_start)(void *jni_env);
     void (*mmtk_request_end)(void *jni_env);
+    void (*mmtk_thread_local_scan_roots_of_mutator_threads)(EdgesClosure closure, void* tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -222,6 +226,9 @@ extern void mmtk_publish_object(void *object);
 extern bool mmtk_is_object_published(void *object);
 extern void mmtk_request_local_gc(void *tls);
 extern void mmtk_request_global_gc(void *tls);
+extern void mmtk_request_single_thread_global_gc(void *tls);
+
+extern void mmtk_publish_object_with_fence(void *object);
 
 #ifdef __cplusplus
 }

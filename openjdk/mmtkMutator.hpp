@@ -114,6 +114,7 @@ struct MMTkMutatorContext {
   MutatorConfig config;
   uint32_t thread_local_gc_status;
   uint32_t mutator_id;
+  uint32_t request_id;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

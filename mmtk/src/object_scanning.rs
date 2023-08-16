@@ -15,9 +15,13 @@ trait OopIterate: Sized {
 impl OopIterate for OopMapBlock {
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let start = oop.get_field_address(self.offset);
+        let _source = ObjectReference::from(oop);
         for i in 0..self.count as usize {
             let edge = start + (i << LOG_BYTES_IN_ADDRESS);
+            #[cfg(not(feature = "debug_publish_object"))]
             closure.visit_edge(edge);
+            #[cfg(feature = "debug_publish_object")]
+            closure.visit_edge(_source, edge);
         }
     }
 }
@@ -65,8 +69,12 @@ impl OopIterate for InstanceMirrorKlass {
         let start: *const Oop = Self::start_of_static_fields(oop).to_ptr::<Oop>();
         let len = Self::static_oop_field_count(oop);
         let slice = unsafe { slice::from_raw_parts(start, len as _) };
+        let _source = ObjectReference::from(oop);
         for oop in slice {
+            #[cfg(not(feature = "debug_publish_object"))]
             closure.visit_edge(Address::from_ref(oop as &Oop));
+            #[cfg(feature = "debug_publish_object")]
+            closure.visit_edge(_source, Address::from_ref(oop as &Oop));
         }
     }
 }
@@ -87,8 +95,12 @@ impl OopIterate for InstanceClassLoaderKlass {
 impl OopIterate for ObjArrayKlass {
     fn oop_iterate(&self, oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
         let array = unsafe { oop.as_array_oop() };
+        let _source = ObjectReference::from(oop);
         for oop in unsafe { array.data::<Oop>(BasicType::T_OBJECT) } {
+            #[cfg(not(feature = "debug_publish_object"))]
             closure.visit_edge(Address::from_ref(oop as &Oop));
+            #[cfg(feature = "debug_publish_object")]
+            closure.visit_edge(_source, Address::from_ref(oop as &Oop));
         }
     }
 }
@@ -132,10 +144,18 @@ impl InstanceRefKlass {
         !*SINGLETON.get_options().no_reference_types
     }
     fn process_ref_as_strong(oop: Oop, closure: &mut impl EdgeVisitor<OpenJDKEdge>) {
+        let _source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address(oop);
+        #[cfg(not(feature = "debug_publish_object"))]
         closure.visit_edge(referent_addr);
+        #[cfg(feature = "debug_publish_object")]
+        closure.visit_edge(_source, referent_addr);
+
         let discovered_addr = Self::discovered_address(oop);
+        #[cfg(not(feature = "debug_publish_object"))]
         closure.visit_edge(discovered_addr);
+        #[cfg(feature = "debug_publish_object")]
+        closure.visit_edge(_source, discovered_addr);
     }
 }
 

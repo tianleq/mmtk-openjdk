@@ -276,11 +276,6 @@ pub extern "C" fn mmtk_harness_end_impl() {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_handle_user_collection_request_with_single_thread(tls: VMMutatorThread) {
-    memory_manager::handle_user_collection_request::<OpenJDK>(&SINGLETON, tls);
-}
-
-#[no_mangle]
 // We trust the name/value pointer is valid.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn process(name: *const c_char, value: *const c_char) -> bool {
@@ -401,8 +396,8 @@ pub extern "C" fn mmtk_object_probable_write(
 
 // finalization
 #[no_mangle]
-pub extern "C" fn add_finalizer(object: ObjectReference) {
-    memory_manager::add_finalizer(&SINGLETON, object);
+pub extern "C" fn add_finalizer(object: ObjectReference, thread_id: u32) {
+    memory_manager::add_finalizer(&SINGLETON, thread_id, object);
 }
 
 #[no_mangle]
@@ -484,6 +479,11 @@ pub extern "C" fn mmtk_request_local_gc(tls: VMMutatorThread) {
 #[no_mangle]
 pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
     memory_manager::mmtk_handle_user_triggered_global_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_single_thread_global_gc(tls: VMMutatorThread) {
+    memory_manager::handle_user_single_thread_collection_request::<OpenJDK>(&SINGLETON, tls);
 }
 
 #[no_mangle]

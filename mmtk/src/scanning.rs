@@ -78,6 +78,20 @@ impl Scanning<OpenJDK> for VMScanning {
         }
     }
 
+    fn thread_local_scan_roots_of_mutator_threads(
+        _tls: VMWorkerThread,
+        mutator: &'static mut Mutator<OpenJDK>,
+        mut factory: impl RootsWorkFactory<OpenJDKEdge>,
+    ) {
+        let tls = mutator.get_tls();
+        unsafe {
+            ((*UPCALLS).thread_local_scan_roots_of_mutator_threads)(
+                to_edges_closure(&mut factory),
+                tls,
+            );
+        }
+    }
+
     fn scan_vm_specific_roots(_tls: VMWorkerThread, factory: impl RootsWorkFactory<OpenJDKEdge>) {
         memory_manager::add_work_packets(
             &SINGLETON,
