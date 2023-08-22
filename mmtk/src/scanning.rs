@@ -23,7 +23,9 @@ extern "C" fn report_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
     _vm_roots_type: u8,
 ) -> NewBuffer {
     if !ptr.is_null() {
-        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        // Note: Currently OpenJDKEdge has the same layout as Address.  If the layout changes, we
+        // should fix the Rust-to-C interface.
+        let buf = unsafe { Vec::<OpenJDKEdge>::from_raw_parts(ptr as _, length, capacity) };
         let factory: &mut F = unsafe { &mut *(factory_ptr as *mut F) };
         #[cfg(not(feature = "debug_publish_object"))]
         factory.create_process_edge_roots_work(buf);
