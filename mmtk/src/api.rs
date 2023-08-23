@@ -463,7 +463,7 @@ pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) {
 
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
-    memory_manager::mmtk_publish_object::<OpenJDK>(&SINGLETON, object);
+    memory_manager::mmtk_publish_object::<OpenJDK>(&SINGLETON, object, Option::None);
 }
 
 #[no_mangle]

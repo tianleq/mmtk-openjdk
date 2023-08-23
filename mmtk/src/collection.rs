@@ -1,10 +1,11 @@
+use crate::SINGLETON;
+use crate::UPCALLS;
+use crate::{MutatorClosure, OpenJDK};
+use mmtk::memory_manager;
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::opaque_pointer::*;
 use mmtk::vm::{Collection, GCThreadContext, Scanning, VMBinding};
 use mmtk::{Mutator, MutatorContext};
-
-use crate::UPCALLS;
-use crate::{MutatorClosure, OpenJDK};
 
 pub struct VMCollection {}
 
@@ -100,6 +101,19 @@ impl Collection<OpenJDK> for VMCollection {
     fn schedule_finalization(_tls: VMWorkerThread) {
         unsafe {
             ((*UPCALLS).schedule_finalizer)();
+        }
+    }
+
+    fn publish_vm_specific_roots(mutator_id: u32) {
+        use mmtk::vm::edge_shape::Edge;
+        for roots in (*crate::CODE_CACHE_ROOTS.lock().unwrap()).values() {
+            for r in roots {
+                memory_manager::mmtk_publish_object::<OpenJDK>(
+                    &SINGLETON,
+                    Edge::load(r),
+                    Some(mutator_id),
+                );
+            }
         }
     }
 }

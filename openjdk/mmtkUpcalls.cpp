@@ -43,8 +43,11 @@
 #include "utilities/debug.hpp"
 
 
-const uint32_t LOCAL_GC_ACTIVE = 1;
-const uint32_t LOCAL_GC_INACTIVE = 0;
+
+Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
+                                                        Monitor::_safepoint_check_sometimes);
+int32_t third_party_heap_active_local_gc_count = 0;
+bool third_party_heap_compilation_requested = false;
 
 
 // Note: This counter must be accessed using the Atomic class.
@@ -127,6 +130,16 @@ static void mmtk_spawn_gc_thread(void* tls, int kind, void* ctx) {
 }
 
 static void mmtk_thread_local_gc_prologue(Thread *thread) {
+  // compiler thread cannot run concurrently with local gc
+  {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+    while(third_party_heap_active_local_gc_count < 0 || third_party_heap_compilation_requested) {
+      third_party_heap_local_gc_active_lock->wait();
+    }
+    assert(third_party_heap_active_local_gc_count >= 0, "local gc should not start");
+    ++third_party_heap_active_local_gc_count;
+  }
+
 
 #if COMPILER2_OR_JVMCI
   // DerivedPointerTable::clear();
@@ -139,7 +152,11 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
 
 static void mmtk_thread_local_gc_epilogue(Thread *thread) {
   // nmethod::oops_do_marking_epilogue();
-
+ {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+    --third_party_heap_active_local_gc_count;
+    if (!third_party_heap_active_local_gc_count) third_party_heap_local_gc_active_lock->notify_all();
+  }
 #if COMPILER2_OR_JVMCI
   // DerivedPointerTable::update_pointers();
   thread->ldpt->update_pointers();
@@ -406,7 +423,6 @@ static void mmtk_request_start(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-  mutator->request_id += 1;
   // assert(mutator->in_request == false, "invalid critical section state (active --> active)");
 }
 
@@ -417,8 +433,8 @@ static void mmtk_request_end(void *jni_env)
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
   // Trigger a local gc
-  // ::mmtk_request_local_gc(thread);
-  ::mmtk_request_single_thread_global_gc(thread);
+  ::mmtk_request_local_gc(thread);
+  // ::mmtk_request_global_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {

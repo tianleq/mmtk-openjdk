@@ -57,6 +57,8 @@ struct ImmixAllocator {
   uint8_t _align[7];
   uint8_t line_opt_tag;
   uintptr_t line_opt;
+  uint8_t block_header_opt_tag;
+  uintptr_t block_header_opt;
 };
 
 struct FLBlock {
@@ -114,7 +116,6 @@ struct MMTkMutatorContext {
   MutatorConfig config;
   uint32_t thread_local_gc_status;
   uint32_t mutator_id;
-  uint32_t request_id;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 
