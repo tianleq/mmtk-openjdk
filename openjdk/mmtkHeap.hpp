@@ -183,7 +183,7 @@ public:
 
   // An object is scavengable if its location may move during a scavenge.
   // (A scavenge is a GC which is not a full GC.)
-  inline bool is_scavengable(oop obj) { return true; }
+  virtual inline bool is_scavengable(oop obj) { return true; }
   // Registering and unregistering an nmethod (compiled code) with the heap.
   // Override with specific mechanism for each specialized heap type.
   virtual void register_nmethod(nmethod* nm);

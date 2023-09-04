@@ -104,14 +104,14 @@ impl Collection<OpenJDK> for VMCollection {
         }
     }
 
-    fn publish_vm_specific_roots(mutator_id: u32) {
+    fn publish_vm_specific_roots(mutator: &'static mut Mutator<OpenJDK>) {
         use mmtk::vm::edge_shape::Edge;
         for roots in (*crate::CODE_CACHE_ROOTS.lock().unwrap()).values() {
             for r in roots {
                 memory_manager::mmtk_publish_object::<OpenJDK>(
                     &SINGLETON,
                     Edge::load(r),
-                    Some(mutator_id),
+                    Some(mutator.mutator_id),
                 );
             }
         }

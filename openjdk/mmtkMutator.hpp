@@ -40,6 +40,7 @@ struct LargeObjectAllocator {
   void* tls;
   void* space;
   RustDynPtr plan;
+  void* local_los_objects;
 };
 
 struct ImmixAllocator {
