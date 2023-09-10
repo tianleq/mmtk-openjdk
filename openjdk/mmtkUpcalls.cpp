@@ -49,7 +49,6 @@ Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "Th
 int32_t third_party_heap_active_local_gc_count = 0;
 bool third_party_heap_compilation_requested = false;
 
-
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
@@ -134,7 +133,7 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
   {
     MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
     while(third_party_heap_active_local_gc_count < 0 || third_party_heap_compilation_requested) {
-      third_party_heap_local_gc_active_lock->wait();
+      third_party_heap_local_gc_active_lock->wait(true);
     }
     assert(third_party_heap_active_local_gc_count >= 0, "local gc should not start");
     ++third_party_heap_active_local_gc_count;
@@ -356,6 +355,12 @@ static size_t compute_klass_mem_layout_checksum() {
     ^ sizeof(ObjArrayKlass);
 }
 
+static size_t compute_allocator_mem_layout_checksum() {
+  return sizeof(ImmixAllocator)
+    ^ sizeof(BumpAllocator)
+    ^ sizeof(LargeObjectAllocator);
+}
+
 static int referent_offset() {
   return java_lang_ref_Reference::referent_offset;
 }
@@ -433,8 +438,8 @@ static void mmtk_request_end(void *jni_env)
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
   // Trigger a local gc
-  ::mmtk_request_local_gc(thread);
-  // ::mmtk_request_global_gc(thread);
+  // ::mmtk_request_local_gc(thread);
+  ::mmtk_request_global_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -480,5 +485,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_enqueue_references,
   mmtk_request_start,
   mmtk_request_end,
-  mmtk_thread_local_scan_roots_of_mutator_threads
+  mmtk_thread_local_scan_roots_of_mutator_threads,
+  compute_allocator_mem_layout_checksum,
 };

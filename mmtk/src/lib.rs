@@ -127,6 +127,7 @@ pub struct OpenJDK_Upcalls {
     pub request_end: extern "C" fn(jni_env: *const c_void),
     pub thread_local_scan_roots_of_mutator_threads:
         extern "C" fn(closure: EdgesClosure, tls: VMMutatorThread),
+    pub compute_allocator_mem_layout_checksum: extern "C" fn() -> usize,
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();

@@ -1,4 +1,6 @@
+use crate::OpenJDK;
 use crate::UPCALLS;
+use mmtk::memory_manager;
 use mmtk::util::constants::*;
 use mmtk::util::conversions;
 use mmtk::util::ObjectReference;
@@ -406,4 +408,8 @@ pub fn validate_memory_layouts() {
             ^ mem::size_of::<ObjArrayKlass>()
     };
     assert_eq!(vm_checksum, binding_checksum);
+    let binding_allocator_checksum =
+        unsafe { ((*UPCALLS).compute_allocator_mem_layout_checksum)() };
+    let core_checksum = memory_manager::compute_allocator_mem_layout_checksum::<OpenJDK>();
+    assert_eq!(binding_allocator_checksum, core_checksum);
 }

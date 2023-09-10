@@ -191,6 +191,7 @@ typedef struct {
     void (*mmtk_request_start)(void *jni_env);
     void (*mmtk_request_end)(void *jni_env);
     void (*mmtk_thread_local_scan_roots_of_mutator_threads)(EdgesClosure closure, void* tls);
+    size_t (*compute_allocator_mem_layout_checksum) ();
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -229,6 +230,8 @@ extern void mmtk_request_global_gc(void *tls);
 extern void mmtk_request_single_thread_global_gc(void *tls);
 
 extern void mmtk_publish_object_with_fence(void *object);
+
+extern void mmtk_inc_leak_count();
 
 #ifdef __cplusplus
 }

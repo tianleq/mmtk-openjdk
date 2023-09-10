@@ -51,6 +51,8 @@ vo_bit = ["mmtk/vo_bit"]
 extra_header = ["mmtk/extra_header"]
 
 debug_publish_object = ["mmtk/debug_publish_object"]
+#Enable thread local gc
+thread_local_gc = ["mmtk/thread_local_gc"]
 
 # This compile time constant places the mark bit in the header of the object instead of on the side.
 mark_bit_in_header = []
