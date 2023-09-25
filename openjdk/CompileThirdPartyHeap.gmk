@@ -29,9 +29,9 @@ endif
 
 ifeq ($(EXTRA_HEADER), 1)
   ifndef GC_FEATURES
-    GC_FEATURES=--features extra_header,debug_publish_object
+    GC_FEATURES=--features extra_header,debug_publish_object,thread_local_gc
   else
-    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header,debug_publish_object"
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header,debug_publish_object,thread_local_gc"
   endif
 endif
 

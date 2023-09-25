@@ -62,7 +62,9 @@ struct ImmixAllocator {
   uintptr_t local_block_map;
   uint8_t block_header_opt_tag;
   uintptr_t block_header_opt;
-  uintptr_t local_map_lock;
+  uintptr_t local_blocks;
+  uint8_t local_line_mark_state;
+  uint8_t local_unavailable_line_mark_state;
 };
 
 struct FLBlock {
