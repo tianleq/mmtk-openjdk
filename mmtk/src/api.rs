@@ -466,8 +466,9 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) {
+pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     memory_manager::mmtk_set_public_bit::<OpenJDK>(&SINGLETON, object);
+    0
 }
 
 #[no_mangle]

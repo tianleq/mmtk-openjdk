@@ -438,8 +438,8 @@ static void mmtk_request_end(void *jni_env)
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
   // Trigger a local gc
-  ::mmtk_request_local_gc(thread);
-  // ::mmtk_request_global_gc(thread);
+  // ::mmtk_request_local_gc(thread);
+  ::mmtk_request_global_gc(thread);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
