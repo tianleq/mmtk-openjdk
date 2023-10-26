@@ -356,7 +356,8 @@ public:
 
 oop MMTkClassAllocator::initialize(HeapWord* mem) const {
   oop result = ClassAllocator::initialize(mem);
-  mmtk_set_public_bit(result);
+  ::mmtk_set_public_bit(result);
+  OrderAccess::fence();
   return result;
 }
 

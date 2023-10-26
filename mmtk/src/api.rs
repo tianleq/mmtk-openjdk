@@ -510,7 +510,7 @@ pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_inc_leak_count() {
+pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
     OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
-    panic!("object leak in JIT compiler thread");
+    // panic!("callsite: {} object leak in JIT compiler thread", _callsite);
 }

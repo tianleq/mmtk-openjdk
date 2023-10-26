@@ -231,7 +231,7 @@ extern void mmtk_request_single_thread_global_gc(void *tls);
 
 extern void mmtk_publish_object_with_fence(void *object);
 
-extern void mmtk_inc_leak_count();
+extern void mmtk_inc_leak_count(unsigned callsite);
 
 #ifdef __cplusplus
 }
