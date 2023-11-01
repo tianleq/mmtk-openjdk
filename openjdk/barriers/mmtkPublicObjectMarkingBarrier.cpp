@@ -211,6 +211,15 @@ void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& 
 
 #define __ ideal.
 
+// The only case that the barrier can be skiped is that the target is null
+bool MMTkPublicObjectMarkingBarrierSetC2::can_remove_barrier(GraphKit* kit, PhaseTransform* phase, Node* src, Node* slot, Node* val, bool skip_const_null) const {
+  // Skip barrier if the new target is a null pointer.
+  if (skip_const_null && val != NULL && val->is_Con() && val->bottom_type() == TypePtr::NULL_PTR) {
+    return true;
+  }
+  return false;
+}
+
 void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const {
   if (can_remove_barrier(kit, &kit->gvn(), src, slot, val, /* skip_const_null */ true)) return;
 

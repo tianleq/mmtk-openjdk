@@ -45,6 +45,7 @@ protected:
 
 class MMTkPublicObjectMarkingBarrierSetC2: public MMTkBarrierSetC2 {
 protected:
+  virtual bool can_remove_barrier(GraphKit* kit, PhaseTransform* phase, Node* src, Node* slot, Node* val, bool skip_const_null) const;
   virtual void object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const override;
 };
 
