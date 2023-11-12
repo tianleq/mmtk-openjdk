@@ -145,8 +145,12 @@ void MMTkBarrierSetRuntime::object_reference_write_slow_call(void* src, void* sl
   ::mmtk_object_reference_write_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
 }
 
-void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
-  ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
+//   ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// }
+
+void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src_base, void* dst_base, void* src, void* dst, size_t count) {
+  ::mmtk_object_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_post_call(void* src, void* dst, size_t count) {

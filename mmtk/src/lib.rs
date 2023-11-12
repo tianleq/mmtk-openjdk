@@ -69,6 +69,7 @@ pub struct EdgesClosure {
         size: usize,
         cap: usize,
         data: *mut libc::c_void,
+        vm_roots: u8,
     ) -> NewBuffer,
     pub data: *const libc::c_void,
 }

@@ -63,7 +63,7 @@ impl<F: RootsWorkFactory<OpenJDKEdge>> GCWork<OpenJDK> for ScanCodeCacheRoots<F>
             }
         }
         // Create work packet
-        self.factory.create_process_edge_roots_work(edges);
+        self.factory.create_process_edge_roots_work(100, edges);
         // Use the following code to scan CodeCache directly, instead of scanning the "remembered set".
         // unsafe {
         //     ((*UPCALLS).scan_code_cache_roots)(create_process_edges_work::<E> as _);

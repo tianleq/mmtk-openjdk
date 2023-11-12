@@ -52,6 +52,7 @@ class MMTkRootsClosure2 : public OopClosure {
   void** _buffer;
   size_t _cap;
   size_t _cursor;
+  int8_t _vm_roots;
 
   template <class T>
   void do_oop_work(T* p) {
@@ -69,7 +70,7 @@ class MMTkRootsClosure2 : public OopClosure {
 
   void flush() {
     if (_cursor > 0) {
-      NewBuffer buf = _edges_closure.invoke(_buffer, _cursor, _cap);
+      NewBuffer buf = _edges_closure.invoke(_buffer, _cursor, _cap, _vm_roots);
       _buffer = buf.buf;
       _cap = buf.cap;
       _cursor = 0;
@@ -77,8 +78,8 @@ class MMTkRootsClosure2 : public OopClosure {
   }
 
 public:
-  MMTkRootsClosure2(EdgesClosure edges_closure): _edges_closure(edges_closure), _cursor(0) {
-    NewBuffer buf = edges_closure.invoke(NULL, 0, 0);
+  MMTkRootsClosure2(EdgesClosure edges_closure, int8_t vm_roots=0): _edges_closure(edges_closure), _cursor(0), _vm_roots(vm_roots) {
+    NewBuffer buf = edges_closure.invoke(NULL, 0, 0, vm_roots);
     _buffer = buf.buf;
     _cap = buf.cap;
   }

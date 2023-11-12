@@ -62,6 +62,9 @@ extern void mmtk_object_reference_write_slow(MMTk_Mutator mutator, void* src, vo
 /// Full array-copy pre-barrier
 extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
+extern void mmtk_object_array_copy_pre(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+
 /// Full array-copy post-barrier
 extern void mmtk_array_copy_post(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
@@ -136,11 +139,11 @@ struct MutatorClosure {
 };
 
 struct EdgesClosure {
-    NewBuffer (*func)(void** buf, size_t size, size_t capa, void* data);
+    NewBuffer (*func)(void** buf, size_t size, size_t capa, void* data, int8_t vm_roots);
     void* data;
 
-    NewBuffer invoke(void** buf, size_t size, size_t capa) {
-        return func(buf, size, capa, data);
+    NewBuffer invoke(void** buf, size_t size, size_t capa, int8_t vm_roots) {
+        return func(buf, size, capa, data, vm_roots);
     }
 };
 

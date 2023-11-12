@@ -49,6 +49,8 @@ Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "Th
 int32_t third_party_heap_active_local_gc_count = 0;
 bool third_party_heap_compilation_requested = false;
 
+static volatile size_t debug_request_count = 0; 
+
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
@@ -378,18 +380,18 @@ static void mmtk_schedule_finalizer() {
   MMTkHeap::heap()->schedule_finalizer();
 }
 
-static void mmtk_scan_universe_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_universe_roots(cl); }
-static void mmtk_scan_jni_handle_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_jni_handle_roots(cl); }
-static void mmtk_scan_object_synchronizer_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_object_synchronizer_roots(cl); }
-static void mmtk_scan_management_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_management_roots(cl); }
-static void mmtk_scan_jvmti_export_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_jvmti_export_roots(cl); }
-static void mmtk_scan_aot_loader_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_aot_loader_roots(cl); }
-static void mmtk_scan_system_dictionary_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_system_dictionary_roots(cl); }
-static void mmtk_scan_code_cache_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_code_cache_roots(cl); }
-static void mmtk_scan_string_table_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_string_table_roots(cl); }
-static void mmtk_scan_class_loader_data_graph_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_class_loader_data_graph_roots(cl); }
-static void mmtk_scan_weak_processor_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_weak_processor_roots(cl); }
-static void mmtk_scan_vm_thread_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure); MMTkHeap::heap()->scan_vm_thread_roots(cl); }
+static void mmtk_scan_universe_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 1); MMTkHeap::heap()->scan_universe_roots(cl); }
+static void mmtk_scan_jni_handle_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 2); MMTkHeap::heap()->scan_jni_handle_roots(cl); }
+static void mmtk_scan_object_synchronizer_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 3); MMTkHeap::heap()->scan_object_synchronizer_roots(cl); }
+static void mmtk_scan_management_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 4); MMTkHeap::heap()->scan_management_roots(cl); }
+static void mmtk_scan_jvmti_export_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 5); MMTkHeap::heap()->scan_jvmti_export_roots(cl); }
+static void mmtk_scan_aot_loader_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 6); MMTkHeap::heap()->scan_aot_loader_roots(cl); }
+static void mmtk_scan_system_dictionary_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 7); MMTkHeap::heap()->scan_system_dictionary_roots(cl); }
+static void mmtk_scan_code_cache_roots(EdgesClosure closure) { assert(false, "");  MMTkRootsClosure2 cl(closure, 8); MMTkHeap::heap()->scan_code_cache_roots(cl); }
+static void mmtk_scan_string_table_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 9); MMTkHeap::heap()->scan_string_table_roots(cl); }
+static void mmtk_scan_class_loader_data_graph_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 10); MMTkHeap::heap()->scan_class_loader_data_graph_roots(cl); }
+static void mmtk_scan_weak_processor_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 11); MMTkHeap::heap()->scan_weak_processor_roots(cl); }
+static void mmtk_scan_vm_thread_roots(EdgesClosure closure) { MMTkRootsClosure2 cl(closure, 12); MMTkHeap::heap()->scan_vm_thread_roots(cl); }
 
 static size_t mmtk_number_of_mutators() {
   return Threads::number_of_threads();
@@ -438,8 +440,10 @@ static void mmtk_request_end(void *jni_env)
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
   // assert(mutator->in_request == true, "invalid critical section state (false --> false)");
   // Trigger a local gc
-  // ::mmtk_request_local_gc(thread);
-  ::mmtk_request_global_gc(thread);
+  ::mmtk_request_local_gc(thread);
+  // ::mmtk_request_global_gc(thread);
+   Atomic::inc(&debug_request_count);
+   printf("request count: %zu\n", Atomic::load(&debug_request_count));
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {

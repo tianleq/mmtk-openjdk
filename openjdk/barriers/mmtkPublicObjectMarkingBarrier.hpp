@@ -21,9 +21,12 @@ public:
   static void object_reference_write_mid_call(void* src, void* slot, void* target);
   // Interfaces called by `MMTkBarrierSet::AccessBarrier`
   virtual void object_reference_write_pre(oop src, oop* slot, oop target) const override;
-  virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const override {
-    object_reference_array_copy_pre_call((void*) src, (void*) dst, count);
-  }
+  // virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const override {
+  //   object_reference_array_copy_pre_call((void*) src, (void*) dst, count);
+  // };
+  virtual void object_reference_array_copy_pre(oop src_base, oop dst_base, oop* src, oop* dst, size_t count) const override {
+    object_reference_array_copy_pre_call((void*)src_base, (void*)dst_base, (void*) src, (void*) dst, count);
+  };
 };
 
 class MMTkPublicObjectMarkingBarrierSetAssembler: public MMTkBarrierSetAssembler {
