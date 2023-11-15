@@ -366,7 +366,7 @@ pub extern "C" fn mmtk_object_reference_write_slow(
         .object_reference_write_slow(src, slot, target);
 }
 
-/// Array-copy pre-barrier
+/// Object Array-copy pre-barrier
 #[no_mangle]
 pub extern "C" fn mmtk_object_array_copy_pre(
     mutator: &'static mut Mutator<OpenJDK>,
@@ -379,7 +379,26 @@ pub extern "C" fn mmtk_object_array_copy_pre(
     let bytes = count << LOG_BYTES_IN_ADDRESS;
     mutator
         .barrier()
-        .array_copy_pre(src_base, dst_base, src..src + bytes, dst..dst + bytes);
+        .object_array_copy_pre(src_base, dst_base, src..src + bytes, dst..dst + bytes);
+}
+
+/// Object Array-copy slow-path call
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_slow(
+    mutator: &'static mut Mutator<OpenJDK>,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << LOG_BYTES_IN_ADDRESS;
+    mutator.barrier().object_array_copy_slow(
+        src_base,
+        dst_base,
+        src..src + bytes,
+        dst..dst + bytes,
+    );
 }
 
 /// Array-copy pre-barrier

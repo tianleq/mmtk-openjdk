@@ -24,8 +24,8 @@ public:
   // virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const override {
   //   object_reference_array_copy_pre_call((void*) src, (void*) dst, count);
   // };
-  virtual void object_reference_array_copy_pre(oop src_base, oop dst_base, oop* src, oop* dst, size_t count) const override {
-    object_reference_array_copy_pre_call((void*)src_base, (void*)dst_base, (void*) src, (void*) dst, count);
+  virtual void object_reference_array_copy_pre( oop* src, oop* dst, size_t count, oop src_base, oop dst_base) const override {
+    object_reference_array_copy_pre_call((void*) src, (void*) dst, count, (void*)src_base, (void*)dst_base);
   };
 };
 
@@ -34,7 +34,11 @@ protected:
   virtual void object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const override;
   virtual void generate_c1_write_barrier_runtime_stub(StubAssembler* sasm) const;
 public:
-  virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) override;
+  virtual void oop_arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, 
+                                      Register src_oop, Register dst_oop, Register src, Register dst, Register count) override;
+  virtual bool use_oop_arraycopy_prologue() const override { 
+    return true; 
+  }
 };
 
 class MMTkPublicObjectMarkingBarrierSetC1: public MMTkBarrierSetC1 {

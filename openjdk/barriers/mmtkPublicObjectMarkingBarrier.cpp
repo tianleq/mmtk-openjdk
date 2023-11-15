@@ -79,14 +79,49 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
 #endif
 }
 
-void MMTkPublicObjectMarkingBarrierSetAssembler::arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) {
-  const bool dest_uninitialized = (decorators & IS_DEST_UNINITIALIZED) != 0;
-  if ((type == T_OBJECT || type == T_ARRAY) && !dest_uninitialized) {
+
+void MMTkPublicObjectMarkingBarrierSetAssembler::oop_arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, 
+                                                                        Register src_oop, Register dst_oop, Register src, Register dst, Register count) {
+  // `count` or `dst` register values may get overwritten after the array copy, and `arraycopy_epilogue` can receive invalid addresses.
+  // Save the register values here and restore them in `arraycopy_epilogue`.
+  // See https://github.com/openjdk/jdk/blob/jdk-11%2B19/src/hotspot/cpu/x86/gc/shared/modRefBarrierSetAssembler_x86.cpp#L37-L50
+
+  bool checkcast = (decorators & ARRAYCOPY_CHECKCAST) != 0;
+  bool disjoint = (decorators & ARRAYCOPY_DISJOINT) != 0;
+  bool obj_int = type == T_OBJECT LP64_ONLY(&& UseCompressedOops);
+
+  if (type == T_OBJECT || type == T_ARRAY) {
+  // No epilogue is needed, so skip the save
+  // another reason is that r11 is rscratch2 and it contains dst
+  assert(src_oop == rscratch1, "src oop is not in r10");
+  assert(dst_oop == rscratch2, "dst oop is not in r11");
+  assert(src == c_rarg0, "src oop is not in rdi");
+  assert(dst == c_rarg1, "dst oop is not in rsi");
+  assert(count == c_rarg2, "dst oop is not in rdx");
+// #ifdef _LP64
+//     if (!checkcast) {
+//       if (!obj_int) {
+//         // Save count for barrier
+//         __ movptr(r11, count);
+//       } else if (disjoint) {
+//         // Save dst in r11 in the disjoint case
+//         __ movq(r11, dst);
+//       }
+//     }
+// #else
+//     if (disjoint) {
+//       __ mov(rdx, dst);          // save 'to'
+//     }
+// #endif
+    // saving all regs is necessary as this prologue does not have its own frame
+    // it has to make sure no registers get killed
     __ pusha();
     __ movptr(c_rarg0, src);
     __ movptr(c_rarg1, dst);
     __ movptr(c_rarg2, count);
-    __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_array_copy_pre_call), 3);
+    __ movptr(c_rarg3, src_oop);
+    __ movptr(c_rarg4, dst_oop);
+    __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_array_copy_pre_call), 5);
     __ popa();
   }
 }
