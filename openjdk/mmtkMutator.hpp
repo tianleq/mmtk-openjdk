@@ -64,6 +64,7 @@ struct ImmixAllocator {
   uint8_t local_line_mark_state;
   uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
+  uintptr_t blocks;
 };
 
 struct FLBlock {

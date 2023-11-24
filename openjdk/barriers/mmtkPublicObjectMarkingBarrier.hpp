@@ -56,6 +56,8 @@ protected:
   virtual void object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const override;
 };
 
+// The semantic of this barrier requires a subsuming barrier 
+// but c2 does not support that.
 struct MMTkPublicObjectMarkingBarrier: MMTkBarrierImpl<
   MMTkPublicObjectMarkingBarrierSetRuntime,
   MMTkPublicObjectMarkingBarrierSetAssembler,

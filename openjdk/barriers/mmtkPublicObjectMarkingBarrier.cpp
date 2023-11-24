@@ -91,13 +91,14 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::oop_arraycopy_prologue(MacroAss
   bool obj_int = type == T_OBJECT LP64_ONLY(&& UseCompressedOops);
 
   if (type == T_OBJECT || type == T_ARRAY) {
-  // No epilogue is needed, so skip the save
-  // another reason is that r11 is rscratch2 and it contains dst
+
   assert(src_oop == rscratch1, "src oop is not in r10");
   assert(dst_oop == rscratch2, "dst oop is not in r11");
   assert(src == c_rarg0, "src oop is not in rdi");
   assert(dst == c_rarg1, "dst oop is not in rsi");
   assert(count == c_rarg2, "dst oop is not in rdx");
+  // No epilogue is needed, so skip the save
+
 // #ifdef _LP64
 //     if (!checkcast) {
 //       if (!obj_int) {
