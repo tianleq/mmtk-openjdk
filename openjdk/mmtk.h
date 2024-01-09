@@ -99,7 +99,7 @@ extern size_t get_max_non_los_default_alloc_bytes();
 /**
  * Finalization
  */
-extern void add_finalizer(void* obj, uint32_t thread_id);
+extern void add_finalizer(void* obj, MMTk_Mutator mutator);
 extern void* get_finalized_object();
 
 /**
@@ -158,7 +158,7 @@ typedef struct {
     void (*resume_mutators) (void *tls);
     void (*spawn_gc_thread) (void *tls, int kind, void *ctx);
     void (*block_for_gc) ();
-    void (*stop_mutator)(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure);
+    void (*scan_mutator)(void *tls, EdgesClosure closure);
     void (*block_for_thread_local_gc)();
     void (*resume_from_thread_local_gc)(void *tls);
     void (*out_of_memory) (void *tls, MMTkAllocationError err_kind);
@@ -196,8 +196,9 @@ typedef struct {
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_request_start)(void *jni_env);
     void (*mmtk_request_end)(void *jni_env);
-    void (*mmtk_thread_local_scan_roots_of_mutator_threads)(EdgesClosure closure, void* tls);
+    // void (*mmtk_thread_local_scan_roots_of_mutator_threads)(EdgesClosure closure, void* tls);
     size_t (*compute_allocator_mem_layout_checksum) ();
+    void (*mmtk_wait_for_thread_local_gc_to_finish) ();
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);

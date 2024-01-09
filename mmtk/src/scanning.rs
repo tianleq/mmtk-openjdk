@@ -5,7 +5,7 @@ use mmtk::memory_manager;
 use mmtk::scheduler::WorkBucketStage;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
-use mmtk::vm::{EdgeVisitor, RootsWorkFactory, Scanning};
+use mmtk::vm::{EdgeVisitor, ObjectGraphTraversal, RootsWorkFactory, Scanning};
 use mmtk::Mutator;
 use mmtk::MutatorContext;
 
@@ -18,12 +18,35 @@ extern "C" fn report_edges_and_renew_buffer<F: RootsWorkFactory<OpenJDKEdge>>(
     length: usize,
     capacity: usize,
     factory_ptr: *mut libc::c_void,
-    vm_roots: u8,
+    vm_roots_type: u8,
 ) -> NewBuffer {
     if !ptr.is_null() {
         let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
         let factory: &mut F = unsafe { &mut *(factory_ptr as *mut F) };
-        factory.create_process_edge_roots_work(vm_roots, buf);
+        factory.create_process_edge_roots_work(vm_roots_type, buf);
+    }
+    let (ptr, _, capacity) = {
+        // TODO: Use Vec::into_raw_parts() when the method is available.
+        use std::mem::ManuallyDrop;
+        let new_vec = Vec::with_capacity(WORK_PACKET_CAPACITY);
+        let mut me = ManuallyDrop::new(new_vec);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    };
+    NewBuffer { ptr, capacity }
+}
+
+#[cfg(feature = "thread_local_gc")]
+extern "C" fn traverse_thread_local_object_graph<F: ObjectGraphTraversal<OpenJDKEdge>>(
+    ptr: *mut Address,
+    length: usize,
+    capacity: usize,
+    traverse_func: *mut libc::c_void,
+    _vm_roots_type: u8,
+) -> NewBuffer {
+    if !ptr.is_null() {
+        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let traverse_func: &mut F = unsafe { &mut *(traverse_func as *mut F) };
+        traverse_func.traverse_from_roots(buf);
     }
     let (ptr, _, capacity) = {
         // TODO: Use Vec::into_raw_parts() when the method is available.
@@ -39,6 +62,16 @@ pub(crate) fn to_edges_closure<F: RootsWorkFactory<OpenJDKEdge>>(factory: &mut F
     EdgesClosure {
         func: report_edges_and_renew_buffer::<F>,
         data: factory as *mut F as *mut libc::c_void,
+    }
+}
+
+#[cfg(feature = "thread_local_gc")]
+pub(crate) fn to_thread_local_graph_traversal_closure<F: ObjectGraphTraversal<OpenJDKEdge>>(
+    graph_traversal_func: &mut F,
+) -> EdgesClosure {
+    EdgesClosure {
+        func: traverse_thread_local_object_graph::<F>,
+        data: graph_traversal_func as *mut F as *mut libc::c_void,
     }
 }
 
@@ -79,19 +112,20 @@ impl Scanning<OpenJDK> for VMScanning {
         }
     }
 
-    fn thread_local_scan_roots_of_mutator_threads(
-        _tls: VMWorkerThread,
-        mutator: &'static mut Mutator<OpenJDK>,
-        mut factory: impl RootsWorkFactory<OpenJDKEdge>,
-    ) {
-        let tls = mutator.get_tls();
-        unsafe {
-            ((*UPCALLS).thread_local_scan_roots_of_mutator_threads)(
-                to_edges_closure(&mut factory),
-                tls,
-            );
-        }
-    }
+    // #[cfg(feature = "thread_local_gc")]
+    // fn thread_local_scan_roots_of_mutator_threads(
+    //     _tls: VMWorkerThread,
+    //     mutator: &'static mut Mutator<OpenJDK>,
+    //     mut factory: impl RootsWorkFactory<OpenJDKEdge>,
+    // ) {
+    //     let tls = mutator.get_tls();
+    //     unsafe {
+    //         ((*UPCALLS).thread_local_scan_roots_of_mutator_threads)(
+    //             to_edges_closure(&mut factory),
+    //             tls,
+    //         );
+    //     }
+    // }
 
     fn scan_vm_specific_roots(_tls: VMWorkerThread, factory: impl RootsWorkFactory<OpenJDKEdge>) {
         memory_manager::add_work_packets(

@@ -130,6 +130,7 @@ static void mmtk_spawn_gc_thread(void* tls, int kind, void* ctx) {
   }
 }
 
+// This function is called by gc thread
 static void mmtk_thread_local_gc_prologue(Thread *thread) {
   // compiler thread cannot run concurrently with local gc
   {
@@ -151,6 +152,7 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
   // nmethod::oops_do_marking_prologue(); 
 }
 
+// This function is called by gc thread
 static void mmtk_thread_local_gc_epilogue(Thread *thread) {
   // nmethod::oops_do_marking_epilogue();
  {
@@ -164,8 +166,16 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 #endif
 }
 
+// This function is called by gc thread
+static void mmtk_wait_for_thread_local_gc_to_finish() {
+  MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+  while (third_party_heap_active_local_gc_count > 0) {
+    third_party_heap_local_gc_active_lock->wait(true);
+  }
+}
+
 // This function is called by gc thread to 
-// make sure the mutaor triggering local gc has 
+// make sure the mutator triggering local gc has 
 // been blocked
 static void mmtk_stop_mutator(void *tls) {
   JavaThread *thread = (JavaThread *) tls;
@@ -174,16 +184,6 @@ static void mmtk_stop_mutator(void *tls) {
     // using OrderAccess::fence()
     if (thread->thread_state() == _thread_blocked) break;
     os::naked_short_sleep(1);
-  }
-}
-
-// This function is called by gc thread
-static void mmtk_scan_mutator(void *tls, bool scan_mutators_in_safepoint, MutatorClosure closure) {
-    JavaThread *cur = (JavaThread *) tls;
-  mmtk_thread_local_gc_prologue(cur);
-  mmtk_stop_mutator(tls);
-  if (!scan_mutators_in_safepoint) {
-    closure.invoke((void*)&cur->third_party_heap_mutator);
   }
 }
 
@@ -294,7 +294,18 @@ static void mmtk_scan_roots_in_mutator_thread(EdgesClosure closure, void* tls) {
   thread->oops_do(&cl, NULL);
 }
 
-static void mmtk_thread_local_scan_roots_of_mutator_threads(EdgesClosure closure, void* tls) {
+// static void mmtk_thread_local_scan_roots_of_mutator_threads(EdgesClosure closure, void* tls) {
+// #if COMPILER2_OR_JVMCI
+//   DerivedPointerTableDeactivate dpt_deact;
+// #endif
+//   mmtk_scan_roots_in_mutator_thread(closure, tls);
+// }
+
+// This function is called by gc thread
+static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
+  JavaThread *cur = (JavaThread *) tls;
+  mmtk_thread_local_gc_prologue(cur);
+  mmtk_stop_mutator(tls);
 #if COMPILER2_OR_JVMCI
   DerivedPointerTableDeactivate dpt_deact;
 #endif
@@ -489,6 +500,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_enqueue_references,
   mmtk_request_start,
   mmtk_request_end,
-  mmtk_thread_local_scan_roots_of_mutator_threads,
+  // mmtk_thread_local_scan_roots_of_mutator_threads,
   compute_allocator_mem_layout_checksum,
+  mmtk_wait_for_thread_local_gc_to_finish,
 };

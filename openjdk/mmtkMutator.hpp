@@ -122,6 +122,7 @@ struct MMTkMutatorContext {
   MutatorConfig config;
   uint32_t thread_local_gc_status;
   uint32_t mutator_id;
+  RustDynPtr finalizable_candidates;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

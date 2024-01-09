@@ -440,8 +440,8 @@ pub extern "C" fn mmtk_object_probable_write(
 
 // finalization
 #[no_mangle]
-pub extern "C" fn add_finalizer(object: ObjectReference, thread_id: u32) {
-    memory_manager::add_finalizer(&SINGLETON, thread_id, object);
+pub extern "C" fn add_finalizer(object: ObjectReference, mutator: &'static mut Mutator<OpenJDK>) {
+    memory_manager::add_finalizer(&SINGLETON, mutator, object);
 }
 
 #[no_mangle]

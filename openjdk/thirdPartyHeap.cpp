@@ -11,7 +11,7 @@ GCArguments* new_gc_arguments() {
 }
 
 void register_finalizer(void* obj, Thread *thread) {
-  add_finalizer(obj, thread->third_party_heap_mutator.mutator_id);
+  add_finalizer(obj, &thread->third_party_heap_mutator);
 }
 
 };

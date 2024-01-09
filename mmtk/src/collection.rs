@@ -1,8 +1,8 @@
-use crate::UPCALLS;
 use crate::{MutatorClosure, OpenJDK};
+use crate::{OpenJDKEdge, UPCALLS};
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::opaque_pointer::*;
-use mmtk::vm::{Collection, GCThreadContext, Scanning, VMBinding};
+use mmtk::vm::{Collection, GCThreadContext, ObjectGraphTraversal, Scanning, VMBinding};
 use mmtk::{Mutator, MutatorContext};
 
 pub struct VMCollection {}
@@ -39,18 +39,16 @@ impl Collection<OpenJDK> for VMCollection {
         }
     }
 
-    fn scan_mutator<F>(tls: VMMutatorThread, mut mutator_visitor: F)
-    where
-        F: FnMut(&'static mut Mutator<OpenJDK>),
-    {
-        let scan_mutators_in_safepoint =
-            <OpenJDK as VMBinding>::VMScanning::SCAN_MUTATORS_IN_SAFEPOINT;
-
+    fn scan_mutator(
+        tls: VMMutatorThread,
+        mut object_graph_traversal_func: impl ObjectGraphTraversal<OpenJDKEdge>,
+    ) {
         unsafe {
             ((*UPCALLS).scan_mutator)(
                 tls,
-                scan_mutators_in_safepoint,
-                MutatorClosure::from_rust_closure(&mut mutator_visitor),
+                crate::scanning::to_thread_local_graph_traversal_closure(
+                    &mut object_graph_traversal_func,
+                ),
             );
         }
     }
@@ -64,6 +62,12 @@ impl Collection<OpenJDK> for VMCollection {
     fn resume_from_thread_local_gc(tls: VMMutatorThread) {
         unsafe {
             ((*UPCALLS).resume_from_thread_local_gc)(tls);
+        }
+    }
+
+    fn wait_for_thread_local_gc_to_finish() {
+        unsafe {
+            ((*UPCALLS).wait_for_thread_local_gc_to_finish)();
         }
     }
 

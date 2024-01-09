@@ -69,7 +69,7 @@ pub struct EdgesClosure {
         size: usize,
         cap: usize,
         data: *mut libc::c_void,
-        vm_roots: u8,
+        vm_roots_type: u8,
     ) -> NewBuffer,
     pub data: *const libc::c_void,
 }
@@ -84,11 +84,7 @@ pub struct OpenJDK_Upcalls {
     pub resume_mutators: extern "C" fn(tls: VMWorkerThread),
     pub spawn_gc_thread: extern "C" fn(tls: VMThread, kind: libc::c_int, ctx: *mut libc::c_void),
     pub block_for_gc: extern "C" fn(),
-    pub scan_mutator: extern "C" fn(
-        tls: VMMutatorThread,
-        scan_mutators_in_safepoint: bool,
-        closure: MutatorClosure,
-    ),
+    pub scan_mutator: extern "C" fn(tls: VMMutatorThread, closure: EdgesClosure),
     pub block_for_thread_local_gc: extern "C" fn(),
     pub resume_from_thread_local_gc: extern "C" fn(tls: VMMutatorThread),
     pub out_of_memory: extern "C" fn(tls: VMThread, err_kind: AllocationError),
@@ -126,9 +122,10 @@ pub struct OpenJDK_Upcalls {
     pub enqueue_references: extern "C" fn(objects: *const ObjectReference, len: usize),
     pub request_start: extern "C" fn(jni_env: *const c_void),
     pub request_end: extern "C" fn(jni_env: *const c_void),
-    pub thread_local_scan_roots_of_mutator_threads:
-        extern "C" fn(closure: EdgesClosure, tls: VMMutatorThread),
+    // pub thread_local_scan_roots_of_mutator_threads:
+    //     extern "C" fn(closure: EdgesClosure, tls: VMMutatorThread),
     pub compute_allocator_mem_layout_checksum: extern "C" fn() -> usize,
+    pub wait_for_thread_local_gc_to_finish: extern "C" fn(),
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();
