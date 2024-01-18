@@ -549,3 +549,18 @@ pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
     OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
     // panic!("callsite: {} object leak in JIT compiler thread", _callsite);
 }
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_starting)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_analyze_object_publication(tls: VMMutatorThread, request_id: i32) {
+    memory_manager::mmtk_analyze_object_publication::<OpenJDK>(tls, request_id);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_clear_object_publication_info(tls: VMMutatorThread) {
+    memory_manager::mmtk_clear_object_publication_info::<OpenJDK>(tls);
+}

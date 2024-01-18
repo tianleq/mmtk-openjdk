@@ -45,7 +45,9 @@ struct LargeObjectAllocator {
 
 struct ImmixAllocator {
   void* tls;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   uint32_t mutator_id;
+#endif
   void* cursor;
   void* limit;
   void* immix_space;
@@ -58,13 +60,18 @@ struct ImmixAllocator {
   uint8_t _align[7];
   uint8_t line_opt_tag;
   uintptr_t line_opt;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   uint8_t block_header_opt_tag;
   uintptr_t block_header_opt;
   uintptr_t local_blocks;
   uint8_t local_line_mark_state;
   uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
+#endif
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
   uintptr_t blocks;
+#endif
+
 };
 
 struct FLBlock {
@@ -120,9 +127,16 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   uint32_t thread_local_gc_status;
   uint32_t mutator_id;
   RustDynPtr finalizable_candidates;
+#endif
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+  size_t allocation_count;
+  size_t bytes_allocated;
+  size_t request_id;
+#endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

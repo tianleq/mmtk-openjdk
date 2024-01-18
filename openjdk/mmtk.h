@@ -120,6 +120,8 @@ extern void start_worker(void *tls, void* worker);
 extern size_t mmtk_add_nmethod_oop(void* object);
 extern size_t mmtk_register_nmethod(void* nm);
 extern size_t mmtk_unregister_nmethod(void* nm);
+extern void mmtk_analyze_object_publication(void *tls, int request_id);
+extern void mmtk_clear_object_publication_info(void *tls);
 
 /**
  * VM Accounting
@@ -158,9 +160,6 @@ typedef struct {
     void (*resume_mutators) (void *tls);
     void (*spawn_gc_thread) (void *tls, int kind, void *ctx);
     void (*block_for_gc) ();
-    void (*scan_mutator)(void *tls, EdgesClosure closure);
-    void (*block_for_thread_local_gc)();
-    void (*resume_from_thread_local_gc)(void *tls);
     void (*out_of_memory) (void *tls, MMTkAllocationError err_kind);
     void (*get_mutators) (MutatorClosure closure);
     void (*scan_object) (void* trace, void* object, void* tls);
@@ -196,9 +195,14 @@ typedef struct {
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_request_start)(void *jni_env);
     void (*mmtk_request_end)(void *jni_env);
-    // void (*mmtk_thread_local_scan_roots_of_mutator_threads)(EdgesClosure closure, void* tls);
+    void (*mmtk_request_starting)(void *jni_env);
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+    void (*scan_mutator)(void *tls, EdgesClosure closure);
+    void (*block_for_thread_local_gc)();
+    void (*resume_from_thread_local_gc)(void *tls);
     size_t (*compute_allocator_mem_layout_checksum) ();
     void (*mmtk_wait_for_thread_local_gc_to_finish) ();
+#endif
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
