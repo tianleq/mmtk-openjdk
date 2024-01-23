@@ -42,10 +42,12 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
                                                         Monitor::_safepoint_check_sometimes);
 int32_t third_party_heap_active_local_gc_count = 0;
 bool third_party_heap_compilation_requested = false;
+#endif
 
 static volatile int debug_request_count = 0; 
 
@@ -127,64 +129,6 @@ static void mmtk_spawn_gc_thread(void* tls, int kind, void* ctx) {
     }
   }
 }
-
-// This function is called by gc thread
-static void mmtk_thread_local_gc_prologue(Thread *thread) {
-  // compiler thread cannot run concurrently with local gc
-  {
-    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
-    while(third_party_heap_active_local_gc_count < 0 || third_party_heap_compilation_requested) {
-      third_party_heap_local_gc_active_lock->wait(true);
-    }
-    assert(third_party_heap_active_local_gc_count >= 0, "local gc should not start");
-    ++third_party_heap_active_local_gc_count;
-  }
-
-
-#if COMPILER2_OR_JVMCI
-  // DerivedPointerTable::clear();
-  thread->ldpt->clear();
-#endif
-  // In a thread-local gc, only the thread's stack gets scanned
-  // so probably no need to call the following
-  // nmethod::oops_do_marking_prologue(); 
-}
-
-// This function is called by gc thread
-static void mmtk_thread_local_gc_epilogue(Thread *thread) {
-  // nmethod::oops_do_marking_epilogue();
- {
-    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
-    --third_party_heap_active_local_gc_count;
-    if (!third_party_heap_active_local_gc_count) third_party_heap_local_gc_active_lock->notify_all();
-  }
-#if COMPILER2_OR_JVMCI
-  // DerivedPointerTable::update_pointers();
-  thread->ldpt->update_pointers();
-#endif
-}
-
-// This function is called by gc thread
-static void mmtk_wait_for_thread_local_gc_to_finish() {
-  MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
-  while (third_party_heap_active_local_gc_count > 0) {
-    third_party_heap_local_gc_active_lock->wait(true);
-  }
-}
-
-// This function is called by gc thread to 
-// make sure the mutator triggering local gc has 
-// been blocked
-static void mmtk_stop_mutator(void *tls) {
-  JavaThread *thread = (JavaThread *) tls;
-  while(true) {
-    // thread_state is serialized properly 
-    // using OrderAccess::fence()
-    if (thread->thread_state() == _thread_blocked) break;
-    os::naked_short_sleep(1);
-  }
-}
-
 
 
 static void mmtk_block_for_gc() {
@@ -392,10 +336,10 @@ static void mmtk_request_starting(void *jni_env)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
-  
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   mmtk_analyze_object_publication(thread, -1);
   // mmtk_clear_object_publication_info(thread);
-
+#endif
 }
 
 static void mmtk_request_start(void *jni_env)
@@ -407,8 +351,10 @@ static void mmtk_request_start(void *jni_env)
   ++mutator->request_id;
 #endif
   Atomic::inc(&debug_request_count);
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   // mmtk_analyze_object_publication(thread);
   mmtk_clear_object_publication_info(thread);
+#endif
 }
 
 static void mmtk_request_end(void *jni_env)
@@ -416,9 +362,9 @@ static void mmtk_request_end(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   mmtk_analyze_object_publication(thread, Atomic::load(&debug_request_count));
-  
+#endif
   // Trigger a local gc
   // ::mmtk_request_local_gc(thread);
 
@@ -427,6 +373,63 @@ static void mmtk_request_end(void *jni_env)
 }
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+
+// This function is called by gc thread
+static void mmtk_thread_local_gc_prologue(Thread *thread) {
+  // compiler thread cannot run concurrently with local gc
+  {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+    while(third_party_heap_active_local_gc_count < 0 || third_party_heap_compilation_requested) {
+      third_party_heap_local_gc_active_lock->wait(true);
+    }
+    assert(third_party_heap_active_local_gc_count >= 0, "local gc should not start");
+    ++third_party_heap_active_local_gc_count;
+  }
+
+
+#if COMPILER2_OR_JVMCI
+  // DerivedPointerTable::clear();
+  thread->ldpt->clear();
+#endif
+  // In a thread-local gc, only the thread's stack gets scanned
+  // so probably no need to call the following
+  // nmethod::oops_do_marking_prologue(); 
+}
+
+// This function is called by gc thread
+static void mmtk_thread_local_gc_epilogue(Thread *thread) {
+  // nmethod::oops_do_marking_epilogue();
+ {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+    --third_party_heap_active_local_gc_count;
+    if (!third_party_heap_active_local_gc_count) third_party_heap_local_gc_active_lock->notify_all();
+  }
+#if COMPILER2_OR_JVMCI
+  // DerivedPointerTable::update_pointers();
+  thread->ldpt->update_pointers();
+#endif
+}
+
+// This function is called by gc thread
+static void mmtk_wait_for_thread_local_gc_to_finish() {
+  MutexLockerEx locker(third_party_heap_local_gc_active_lock, Mutex::_no_safepoint_check_flag);
+  while (third_party_heap_active_local_gc_count > 0) {
+    third_party_heap_local_gc_active_lock->wait(true);
+  }
+}
+
+// This function is called by gc thread to 
+// make sure the mutator triggering local gc has 
+// been blocked
+static void mmtk_stop_mutator(void *tls) {
+  JavaThread *thread = (JavaThread *) tls;
+  while(true) {
+    // thread_state is serialized properly 
+    // using OrderAccess::fence()
+    if (thread->thread_state() == _thread_blocked) break;
+    os::naked_short_sleep(1);
+  }
+}
 
 // This function is called by gc thread
 static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {

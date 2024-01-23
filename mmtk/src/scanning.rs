@@ -5,7 +5,9 @@ use mmtk::memory_manager;
 use mmtk::scheduler::WorkBucketStage;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
-use mmtk::vm::{EdgeVisitor, ObjectGraphTraversal, RootsWorkFactory, Scanning};
+#[cfg(feature = "thread_local_gc")]
+use mmtk::vm::ObjectGraphTraversal;
+use mmtk::vm::{EdgeVisitor, RootsWorkFactory, Scanning};
 use mmtk::Mutator;
 use mmtk::MutatorContext;
 

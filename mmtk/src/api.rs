@@ -500,22 +500,26 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
     }
 }
 
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     memory_manager::mmtk_set_public_bit::<OpenJDK>(&SINGLETON, object);
     0
 }
 
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
     memory_manager::mmtk_publish_object::<OpenJDK>(&SINGLETON, object);
 }
 
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
     memory_manager::mmtk_is_object_published::<OpenJDK>(object)
 }
 
+#[cfg(feature = "thread_local_gc")]
 #[no_mangle]
 pub extern "C" fn mmtk_request_local_gc(_tls: VMMutatorThread) {
     #[cfg(feature = "thread_local_gc")]
@@ -530,11 +534,6 @@ pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_request_single_thread_global_gc(tls: VMMutatorThread) {
-    memory_manager::handle_user_single_thread_collection_request::<OpenJDK>(&SINGLETON, tls);
-}
-
-#[no_mangle]
 pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_start)(jni_env) };
 }
@@ -544,6 +543,7 @@ pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_end)(jni_env) };
 }
 
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
     OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
@@ -555,11 +555,13 @@ pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_starting)(jni_env) };
 }
 
+#[cfg(feature = "public_object_analysis")]
 #[no_mangle]
 pub extern "C" fn mmtk_analyze_object_publication(tls: VMMutatorThread, request_id: i32) {
     memory_manager::mmtk_analyze_object_publication::<OpenJDK>(tls, request_id);
 }
 
+#[cfg(feature = "public_object_analysis")]
 #[no_mangle]
 pub extern "C" fn mmtk_clear_object_publication_info(tls: VMMutatorThread) {
     memory_manager::mmtk_clear_object_publication_info::<OpenJDK>(tls);

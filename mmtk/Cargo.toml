@@ -38,7 +38,7 @@ mmtk = { path = "../../mmtk-core" }
 built = { version = "0.5.1", features = ["git2"] }
 
 [features]
-default = ["debug_publish_object", "thread_local_gc"]
+default = ["debug_publish_object"]
 mmtk_extreme_assertions = ["mmtk/extreme_assertions"]
 nogc_lock_free = ["mmtk/nogc_lock_free"]
 nogc_no_zeroing = ["mmtk/nogc_no_zeroing"]
@@ -50,11 +50,12 @@ vo_bit = ["mmtk/vo_bit"]
 # See README.
 extra_header = ["mmtk/extra_header"]
 
-debug_publish_object = ["mmtk/debug_publish_object"]
+public_bit = ["mmtk/public_bit"]
+debug_publish_object = ["mmtk/debug_publish_object", "public_bit"]
 #Enable thread local gc
-thread_local_gc = ["mmtk/thread_local_gc"]
+thread_local_gc = ["mmtk/thread_local_gc", "public_bit"]
 
-public_object_analysis = ["mmtk/public_object_analysis"]
+public_object_analysis = ["mmtk/public_object_analysis", "public_bit"]
 
 # This compile time constant places the mark bit in the header of the object instead of on the side.
 mark_bit_in_header = []

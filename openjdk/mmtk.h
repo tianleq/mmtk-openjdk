@@ -120,8 +120,6 @@ extern void start_worker(void *tls, void* worker);
 extern size_t mmtk_add_nmethod_oop(void* object);
 extern size_t mmtk_register_nmethod(void* nm);
 extern size_t mmtk_unregister_nmethod(void* nm);
-extern void mmtk_analyze_object_publication(void *tls, int request_id);
-extern void mmtk_clear_object_publication_info(void *tls);
 
 /**
  * VM Accounting
@@ -233,16 +231,25 @@ extern void add_phantom_candidate(void* ref, void* referent);
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 
+extern void mmtk_request_global_gc(void *tls);
+
+#ifdef MMTK_ENABLE_PUBLIC_BIT
 extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
-extern bool mmtk_is_object_published(void *object);
-extern void mmtk_request_local_gc(void *tls);
-extern void mmtk_request_global_gc(void *tls);
-extern void mmtk_request_single_thread_global_gc(void *tls);
-
 extern void mmtk_publish_object_with_fence(void *object);
-
+extern bool mmtk_is_object_published(void *object);
 extern void mmtk_inc_leak_count(unsigned callsite);
+#endif
+
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+extern void mmtk_request_local_gc(void *tls);
+#endif
+
+
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+extern void mmtk_analyze_object_publication(void *tls, int request_id);
+extern void mmtk_clear_object_publication_info(void *tls);
+#endif
 
 #ifdef __cplusplus
 }
