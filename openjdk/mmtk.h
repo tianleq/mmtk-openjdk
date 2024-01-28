@@ -247,7 +247,7 @@ extern void mmtk_request_local_gc(void *tls);
 
 
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-extern void mmtk_analyze_object_publication(void *tls, int request_id);
+extern void mmtk_analyze_object_publication(void *tls, int id);
 extern void mmtk_clear_object_publication_info(void *tls);
 #endif
 

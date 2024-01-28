@@ -127,15 +127,16 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+  uint32_t mutator_id;
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   uint32_t thread_local_gc_status;
-  uint32_t mutator_id;
   RustDynPtr finalizable_candidates;
 #endif
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   size_t allocation_count;
   size_t bytes_allocated;
-  size_t request_id;
+  unsigned request_id;
+  unsigned global_request_id;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

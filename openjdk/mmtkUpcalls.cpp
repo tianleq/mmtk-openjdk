@@ -49,7 +49,12 @@ int32_t third_party_heap_active_local_gc_count = 0;
 bool third_party_heap_compilation_requested = false;
 #endif
 
-static volatile int debug_request_count = 0; 
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+static volatile int global_request_count = 0; 
+Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
+                                                        Monitor::_safepoint_check_never);
+#endif
+
 
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
@@ -349,9 +354,11 @@ static void mmtk_request_start(void *jni_env)
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   ++mutator->request_id;
-#endif
-  Atomic::inc(&debug_request_count);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+  {
+    MutexLockerEx locker(global_request_id_lock, Mutex::_no_safepoint_check_flag);
+    ++global_request_count;
+    mutator->global_request_id = global_request_count; 
+  }
   // mmtk_analyze_object_publication(thread);
   mmtk_clear_object_publication_info(thread);
 #endif
@@ -363,7 +370,7 @@ static void mmtk_request_end(void *jni_env)
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  mmtk_analyze_object_publication(thread, Atomic::load(&debug_request_count));
+  mmtk_analyze_object_publication(thread, mutator->global_request_id);
 #endif
   // Trigger a local gc
   // ::mmtk_request_local_gc(thread);
