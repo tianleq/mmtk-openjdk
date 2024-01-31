@@ -18,6 +18,7 @@ use mmtk::MutatorContext;
 use once_cell::sync;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
+#[cfg(feature = "debug_publish_object")]
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -28,6 +29,7 @@ static OBJECT_BARRIER: sync::Lazy<CString> =
 static PUBLIC_OBJECT_MARKING_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("PublicObjectMarkingBarrier").unwrap());
 
+#[cfg(feature = "debug_publish_object")]
 static OBJECT_LEAK_IN_JIT_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
@@ -270,12 +272,16 @@ pub extern "C" fn mmtk_harness_begin_impl() {
 
 #[no_mangle]
 pub extern "C" fn harness_end(_id: usize) {
-    println!("********************************************");
-    println!(
-        "{} objects leaked in JIT compiler thread",
-        OBJECT_LEAK_IN_JIT_COUNT.load(Ordering::SeqCst)
-    );
-    println!("********************************************");
+    #[cfg(feature = "debug_publish_object")]
+    {
+        println!("********************************************");
+        println!(
+            "{} objects leaked in JIT compiler thread",
+            OBJECT_LEAK_IN_JIT_COUNT.load(Ordering::SeqCst)
+        );
+        println!("********************************************");
+    }
+
     unsafe { ((*UPCALLS).harness_end)() };
 }
 
@@ -543,7 +549,7 @@ pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_end)(jni_env) };
 }
 
-#[cfg(feature = "public_bit")]
+#[cfg(feature = "debug_publish_object")]
 #[no_mangle]
 pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
     OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
@@ -553,6 +559,21 @@ pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
 #[no_mangle]
 pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
     unsafe { ((*UPCALLS).request_starting)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_finished)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting_impl() {
+    memory_manager::request_starting(&SINGLETON);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished_impl() {
+    memory_manager::request_finished(&SINGLETON);
 }
 
 #[cfg(feature = "public_object_analysis")]

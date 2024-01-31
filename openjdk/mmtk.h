@@ -194,6 +194,7 @@ typedef struct {
     void (*mmtk_request_start)(void *jni_env);
     void (*mmtk_request_end)(void *jni_env);
     void (*mmtk_request_starting)(void *jni_env);
+    void (*mmtk_request_finished)(void *jni_env);
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
     void (*scan_mutator)(void *tls, EdgesClosure closure);
     void (*block_for_thread_local_gc)();
@@ -231,6 +232,9 @@ extern void add_phantom_candidate(void* ref, void* referent);
 extern void mmtk_harness_begin_impl();
 extern void mmtk_harness_end_impl();
 
+extern void mmtk_request_starting_impl();
+extern void mmtk_request_finished_impl();
+
 extern void mmtk_request_global_gc(void *tls);
 
 #ifdef MMTK_ENABLE_PUBLIC_BIT
@@ -238,18 +242,21 @@ extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
 extern void mmtk_publish_object_with_fence(void *object);
 extern bool mmtk_is_object_published(void *object);
-extern void mmtk_inc_leak_count(unsigned callsite);
 #endif
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 extern void mmtk_request_local_gc(void *tls);
 #endif
 
+#ifdef DEBUG_PUBLISH_OBJECT
+extern void mmtk_inc_leak_count(unsigned callsite);
+#endif
 
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
 extern void mmtk_analyze_object_publication(void *tls, int id);
 extern void mmtk_clear_object_publication_info(void *tls);
 #endif
+
 
 #ifdef __cplusplus
 }

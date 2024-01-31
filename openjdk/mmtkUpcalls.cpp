@@ -55,6 +55,10 @@ Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_L
                                                         Monitor::_safepoint_check_never);
 #endif
 
+static volatile int global_request_count = 1; 
+Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
+                                                        Monitor::_safepoint_check_never);
+
 
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
@@ -268,12 +272,6 @@ static size_t compute_klass_mem_layout_checksum() {
     ^ sizeof(ObjArrayKlass);
 }
 
-static size_t compute_allocator_mem_layout_checksum() {
-  return sizeof(ImmixAllocator)
-    ^ sizeof(BumpAllocator)
-    ^ sizeof(LargeObjectAllocator);
-}
-
 static int referent_offset() {
   return java_lang_ref_Reference::referent_offset;
 }
@@ -345,6 +343,14 @@ static void mmtk_request_starting(void *jni_env)
   mmtk_analyze_object_publication(thread, -1);
   // mmtk_clear_object_publication_info(thread);
 #endif
+  mmtk_request_starting_impl();
+}
+
+static void mmtk_request_finished(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  mmtk_request_finished_impl();
 }
 
 static void mmtk_request_start(void *jni_env)
@@ -375,7 +381,7 @@ static void mmtk_request_end(void *jni_env)
   // Trigger a local gc
   // ::mmtk_request_local_gc(thread);
 
-  ::mmtk_request_global_gc(thread);
+  // ::mmtk_request_global_gc(thread);
 
 }
 
@@ -480,6 +486,12 @@ static void mmtk_resume_from_thread_local_gc(void *tls) {
     thread->third_party_heap_local_gc_lock->notify_all();
   }
 }
+
+static size_t compute_allocator_mem_layout_checksum() {
+  return sizeof(ImmixAllocator)
+    ^ sizeof(BumpAllocator)
+    ^ sizeof(LargeObjectAllocator);
+}
 #endif
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -523,6 +535,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_request_start,
   mmtk_request_end,
   mmtk_request_starting,
+  mmtk_request_finished,
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   mmtk_scan_mutator,
   mmtk_block_for_thread_local_gc,

@@ -120,6 +120,7 @@ pub struct OpenJDK_Upcalls {
     pub request_start: extern "C" fn(jni_env: *const c_void),
     pub request_end: extern "C" fn(jni_env: *const c_void),
     pub request_starting: extern "C" fn(jni_env: *const c_void),
+    pub request_finished: extern "C" fn(jni_env: *const c_void),
     #[cfg(feature = "thread_local_gc")]
     pub scan_mutator: extern "C" fn(tls: VMMutatorThread, closure: EdgesClosure),
     #[cfg(feature = "thread_local_gc")]
