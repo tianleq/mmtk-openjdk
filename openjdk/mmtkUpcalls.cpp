@@ -55,9 +55,9 @@ Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_L
                                                         Monitor::_safepoint_check_never);
 #endif
 
-static volatile int global_request_count = 1; 
-Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
-                                                        Monitor::_safepoint_check_never);
+// static volatile int global_request_count = 1; 
+// Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
+//                                                         Monitor::_safepoint_check_never);
 
 
 // Note: This counter must be accessed using the Atomic class.
@@ -339,10 +339,6 @@ static void mmtk_request_starting(void *jni_env)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  mmtk_analyze_object_publication(thread, -1);
-  // mmtk_clear_object_publication_info(thread);
-#endif
   mmtk_request_starting_impl();
 }
 
@@ -365,7 +361,6 @@ static void mmtk_request_start(void *jni_env)
     ++global_request_count;
     mutator->global_request_id = global_request_count; 
   }
-  // mmtk_analyze_object_publication(thread);
   mmtk_clear_object_publication_info(thread);
 #endif
 }
@@ -376,7 +371,7 @@ static void mmtk_request_end(void *jni_env)
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  mmtk_analyze_object_publication(thread, mutator->global_request_id);
+  mmtk_print_object_publication(thread, mutator->global_request_id);
 #endif
   // Trigger a local gc
   // ::mmtk_request_local_gc(thread);

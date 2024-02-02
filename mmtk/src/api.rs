@@ -578,8 +578,8 @@ pub extern "C" fn mmtk_request_finished_impl() {
 
 #[cfg(feature = "public_object_analysis")]
 #[no_mangle]
-pub extern "C" fn mmtk_analyze_object_publication(tls: VMMutatorThread, id: i32) {
-    memory_manager::mmtk_analyze_object_publication::<OpenJDK>(tls, id);
+pub extern "C" fn mmtk_print_object_publication(tls: VMMutatorThread, id: i32) {
+    memory_manager::mmtk_print_object_publication::<OpenJDK>(tls, id);
 }
 
 #[cfg(feature = "public_object_analysis")]
