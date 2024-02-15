@@ -71,12 +71,12 @@ impl Collection<OpenJDK> for VMCollection {
         }
     }
 
-    #[cfg(feature = "thread_local_gc")]
-    fn wait_for_thread_local_gc_to_finish() {
-        unsafe {
-            ((*UPCALLS).wait_for_thread_local_gc_to_finish)();
-        }
-    }
+    // #[cfg(feature = "thread_local_gc")]
+    // fn wait_for_thread_local_gc_to_finish() {
+    //     unsafe {
+    //         ((*UPCALLS).wait_for_thread_local_gc_to_finish)();
+    //     }
+    // }
 
     fn spawn_gc_thread(tls: VMThread, ctx: GCThreadContext<OpenJDK>) {
         let (ctx_ptr, kind) = match ctx {

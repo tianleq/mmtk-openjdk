@@ -199,9 +199,10 @@ typedef struct {
     void (*scan_mutator)(void *tls, EdgesClosure closure);
     void (*block_for_thread_local_gc)();
     void (*resume_from_thread_local_gc)(void *tls);
-    size_t (*compute_allocator_mem_layout_checksum) ();
-    void (*mmtk_wait_for_thread_local_gc_to_finish) ();
+    // void (*mmtk_wait_for_thread_local_gc_to_finish) ();
 #endif
+    size_t (*compute_allocator_mem_layout_checksum) ();
+    size_t (*compute_mutator_mem_layout_checksum) ();
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);

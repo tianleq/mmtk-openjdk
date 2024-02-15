@@ -406,14 +406,15 @@ pub fn validate_memory_layouts() {
             ^ mem::size_of::<ObjArrayKlass>()
     };
     assert_eq!(vm_checksum, binding_checksum);
-    #[cfg(feature = "thread_local_gc")]
-    {
-        use crate::OpenJDK;
-        use mmtk::memory_manager;
 
-        let binding_allocator_checksum =
-            unsafe { ((*UPCALLS).compute_allocator_mem_layout_checksum)() };
-        let core_checksum = memory_manager::compute_allocator_mem_layout_checksum::<OpenJDK>();
-        assert_eq!(binding_allocator_checksum, core_checksum);
-    }
+    use crate::OpenJDK;
+    use mmtk::memory_manager;
+
+    let binding_allocator_checksum =
+        unsafe { ((*UPCALLS).compute_allocator_mem_layout_checksum)() };
+    let core_checksum = memory_manager::compute_allocator_mem_layout_checksum::<OpenJDK>();
+    assert_eq!(binding_allocator_checksum, core_checksum);
+    let binding_mutator_checksum = unsafe { ((*UPCALLS).compute_mutator_mem_layout_checksum)() };
+    let core_mutator_checksum = memory_manager::compute_mutator_mem_layout_checksum::<OpenJDK>();
+    assert_eq!(binding_mutator_checksum, core_mutator_checksum);
 }

@@ -108,4 +108,8 @@ impl ObjectModel<OpenJDK> for VMObjectModel {
         // If oop.klass is not a valid pointer, we may segfault here.
         oop.klass.id as i32 >= 0 && (oop.klass.id as i32) < 6
     }
+
+    fn null_slot() -> crate::OpenJDKEdge {
+        Address::ZERO
+    }
 }
