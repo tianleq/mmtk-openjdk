@@ -197,7 +197,6 @@ typedef struct {
     void (*mmtk_request_finished)(void *jni_env);
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
     void (*scan_mutator)(void *tls, EdgesClosure closure);
-    void (*block_for_thread_local_gc)();
     void (*resume_from_thread_local_gc)(void *tls);
     // void (*mmtk_wait_for_thread_local_gc_to_finish) ();
 #endif
@@ -246,7 +245,7 @@ extern bool mmtk_is_object_published(void *object);
 #endif
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-extern void mmtk_request_local_gc(void *tls);
+extern void mmtk_do_local_gc(void *tls);
 #endif
 
 #ifdef DEBUG_PUBLISH_OBJECT

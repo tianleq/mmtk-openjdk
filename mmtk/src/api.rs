@@ -527,7 +527,7 @@ pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
 
 #[cfg(feature = "thread_local_gc")]
 #[no_mangle]
-pub extern "C" fn mmtk_request_local_gc(_tls: VMMutatorThread) {
+pub extern "C" fn mmtk_do_local_gc(_tls: VMMutatorThread) {
     #[cfg(feature = "thread_local_gc")]
     memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, _tls);
     #[cfg(not(feature = "thread_local_gc"))]

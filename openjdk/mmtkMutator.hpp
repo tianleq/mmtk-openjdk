@@ -119,6 +119,12 @@ struct MutatorConfig {
   void* space_mapping;
   RustDynPtr prepare_func;
   RustDynPtr release_func;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  RustDynPtr thread_local_prepare_func;
+  RustDynPtr thread_local_release_func;
+  RustDynPtr thread_local_alloc_copy_func;
+  RustDynPtr thread_local_post_copy_func;
+#endif
 };
 
 struct MMTkMutatorContext {

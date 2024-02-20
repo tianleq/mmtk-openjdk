@@ -80,11 +80,6 @@ static void mmtk_stop_all_mutators(void *tls, bool scan_mutators_in_safepoint, M
   if (!scan_mutators_in_safepoint) {
     JavaThreadIteratorWithHandle jtiwh;
     while (JavaThread *cur = jtiwh.next()) {
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
-    // The following is still not enough, it is simply a sanity check. 
-    // The local gc status may not have been updated but the local gc is already triggered 
-    assert(cur->third_party_heap_mutator.thread_local_gc_status == LOCAL_GC_INACTIVE, "global gc and local gc must be mutually-exclusive");
-#endif
       closure.invoke((void*)&cur->third_party_heap_mutator);
     }
   }
@@ -213,6 +208,11 @@ static void mmtk_get_mutators(MutatorClosure closure) {
 
 static void mmtk_scan_roots_in_all_mutator_threads(EdgesClosure closure) {
   MMTkRootsClosure2 cl(closure);
+
+
+
+
+
   MMTkHeap::heap()->scan_roots_in_all_mutator_threads(cl);
 }
 
@@ -376,6 +376,8 @@ static void mmtk_request_start(void *jni_env)
 static void mmtk_request_end(void *jni_env)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  // This upcall is used by the jni function, so the thread is in native state
+  // first need to transition to vm, then transition to a state ready for handshake
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
@@ -385,8 +387,36 @@ static void mmtk_request_end(void *jni_env)
   mutator->request_id += 1;
 #endif
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
-  // Trigger a local gc
-  ::mmtk_request_local_gc(thread);
+  {
+    /*
+     *    
+      void HandshakeState::process_self_inner(JavaThread* thread) {
+        assert(Thread::current() == thread, "should call from thread");
+        assert(!thread->is_terminated(), "should not be a terminated thread");
+
+        ThreadInVMForHandshake tivm(thread);
+        if (!_semaphore.trywait()) {
+          _semaphore.wait_with_safepoint_check(thread);
+        }
+        HandshakeOperation* op = OrderAccess::load_acquire(&_operation);
+        if (op != NULL) {
+          HandleMark hm(thread);
+          CautiouslyPreserveExceptionMark pem(thread);
+          // Disarm before execute the operation
+          clear_handshake(thread);
+          op->do_handshake(thread);
+        }
+        _semaphore.signal();
+      }
+    *
+    */
+    // Use part of the hotspot handshake mechanism 
+    // to do the local gc
+    ThreadInVMForHandshake tivm(thread);
+    // Trigger a local gc
+    ::mmtk_do_local_gc(thread);
+  }
+
 #endif
   // ::mmtk_request_global_gc(thread);
 
@@ -394,7 +424,6 @@ static void mmtk_request_end(void *jni_env)
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 
-// This function is called by gc thread
 static void mmtk_thread_local_gc_prologue(Thread *thread) {
   // compiler thread cannot run concurrently with local gc
   {
@@ -438,62 +467,59 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 //   }
 // }
 
-// This function is called by gc thread to 
-// make sure the mutator triggering local gc has 
-// been blocked
-static void mmtk_stop_mutator(void *tls) {
-  JavaThread *thread = (JavaThread *) tls;
-  while(true) {
-    // thread_state is serialized properly 
-    // using OrderAccess::fence()
-    if (thread->thread_state() == _thread_blocked && thread->third_party_heap_mutator.thread_local_gc_status) break;
-    os::naked_short_sleep(1);
-  }
-}
+// // This function is called by gc thread to 
+// // make sure the mutator triggering local gc has 
+// // been blocked
+// static void mmtk_stop_mutator(void *tls) {
+//   JavaThread *thread = (JavaThread *) tls;
+//   while(true) {
+//     // thread_state is serialized properly 
+//     // using OrderAccess::fence()
+//     if (thread->thread_state() == _thread_blocked) break;
+//     os::naked_short_sleep(1);
+//   }
+// }
 
-// This function is called by gc thread
 static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
   JavaThread *cur = (JavaThread *) tls;
   mmtk_thread_local_gc_prologue(cur);
-  mmtk_stop_mutator(tls);
+  // mmtk_stop_mutator(tls);
 #if COMPILER2_OR_JVMCI
   DerivedPointerTableDeactivate dpt_deact;
 #endif
-  breakpoint();
   mmtk_scan_roots_in_mutator_thread(closure, tls);
 }
 
-// This function is called by mutator thread
-// to block itself
-static void mmtk_block_for_thread_local_gc() {
+// // This function is called by mutator thread
+// // to block itself
+// static void mmtk_block_for_thread_local_gc() {
   
-  JavaThread *current = (JavaThread *) Thread::current();
-  assert(Thread::current()->is_Java_thread(), "Only Java thread can block for thread-local gc");
-  log_debug(gc)("Thread (id=%d) will block waiting for thread-local GC to finish.", current->osthread()->thread_id());
-  {
-      // Once this thread acquires the lock and wait, the VM will consider this thread to be "in safe point".
-      MutexLocker locker(current->third_party_heap_local_gc_lock);
-      current->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
-      printf("thread_local_gc_status value: %d, address: %p\n", current->third_party_heap_mutator.thread_local_gc_status, &current->third_party_heap_mutator.thread_local_gc_status);
-      while (current->third_party_heap_mutator.thread_local_gc_status == LOCAL_GC_ACTIVE) {
-        // wait() may wake up spuriously, but the authoritative condition for unblocking is
-        // thread_local_gc_status being reset.
-        current->third_party_heap_local_gc_lock->wait();
-      }
-    }
-  log_debug(gc)("Thread (id=%d) resumed after thread local GC finished.", current->osthread()->thread_id());
-}
+//   JavaThread *current = (JavaThread *) Thread::current();
+//   assert(Thread::current()->is_Java_thread(), "Only Java thread can block for thread-local gc");
+//   log_debug(gc)("Thread (id=%d) will block waiting for thread-local GC to finish.", current->osthread()->thread_id());
+//   {
+//       // Once this thread acquires the lock and wait, the VM will consider this thread to be "in safe point".
+//       MutexLocker locker(current->third_party_heap_local_gc_lock);
+//       current->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_ACTIVE;
+//       printf("thread_local_gc_status value: %d, address: %p\n", current->third_party_heap_mutator.thread_local_gc_status, &current->third_party_heap_mutator.thread_local_gc_status);
+//       while (current->third_party_heap_mutator.thread_local_gc_status == LOCAL_GC_ACTIVE) {
+//         // wait() may wake up spuriously, but the authoritative condition for unblocking is
+//         // thread_local_gc_status being reset.
+//         current->third_party_heap_local_gc_lock->wait();
+//       }
+//     }
+//   log_debug(gc)("Thread (id=%d) resumed after thread local GC finished.", current->osthread()->thread_id());
+// }
 
-// This function is executed by GC thread
 static void mmtk_resume_from_thread_local_gc(void *tls) {
   JavaThread *thread = (JavaThread *) tls;
   mmtk_thread_local_gc_epilogue(thread);
-  {
-    MutexLockerEx locker(thread->third_party_heap_local_gc_lock, true);
+  // {
+  //   MutexLockerEx locker(thread->third_party_heap_local_gc_lock, true);
 
-    thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_INACTIVE;
-    thread->third_party_heap_local_gc_lock->notify_all();
-  }
+  //   thread->third_party_heap_mutator.thread_local_gc_status = LOCAL_GC_INACTIVE;
+  //   thread->third_party_heap_local_gc_lock->notify_all();
+  // }
 }
 #endif
 
@@ -551,9 +577,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_request_finished,
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   mmtk_scan_mutator,
-  mmtk_block_for_thread_local_gc,
   mmtk_resume_from_thread_local_gc,
-  // mmtk_wait_for_thread_local_gc_to_finish,
 #endif
   compute_allocator_mem_layout_checksum,
   compute_mutator_mem_layout_checksum

@@ -36,6 +36,32 @@ impl ObjectModel<OpenJDK> for VMObjectModel {
         to_obj
     }
 
+    #[cfg(feature = "thread_local_gc")]
+    /// Copy an object and return the address of the new object. Usually in the implementation of this method,
+    /// `alloc_copy()` and `post_copy()` from [`GCWorkerCopyContext`](util/copy/struct.GCWorkerCopyContext.html)
+    /// are used for copying.
+    ///
+    /// Arguments:
+    /// * `from`: The address of the object to be copied.
+    /// * `semantics`: The copy semantic to use.
+    /// * `mutator`: The `Mutator` for the mutator thread.
+    fn thread_local_copy(
+        from: ObjectReference,
+        _semantics: CopySemantics,
+        mutator: &mut crate::Mutator<OpenJDK>,
+    ) -> ObjectReference {
+        use mmtk::MutatorContext;
+
+        let bytes = unsafe { Oop::from(from).size() };
+        let dst = mutator.alloc_copy(bytes, ::std::mem::size_of::<usize>(), 0);
+        // Copy
+        let src = from.to_raw_address();
+        unsafe { std::ptr::copy_nonoverlapping::<u8>(src.to_ptr(), dst.to_mut_ptr(), bytes) }
+        let to_obj = ObjectReference::from_raw_address(dst);
+        mutator.post_copy(to_obj, bytes);
+        to_obj
+    }
+
     fn copy_to(from: ObjectReference, to: ObjectReference, region: Address) -> Address {
         let need_copy = from != to;
         let bytes = unsafe { ((*UPCALLS).get_object_size)(from) };

@@ -58,13 +58,6 @@ impl Collection<OpenJDK> for VMCollection {
     }
 
     #[cfg(feature = "thread_local_gc")]
-    fn block_for_thread_local_gc(_tls: VMMutatorThread) {
-        unsafe {
-            ((*UPCALLS).block_for_thread_local_gc)();
-        }
-    }
-
-    #[cfg(feature = "thread_local_gc")]
     fn resume_from_thread_local_gc(tls: VMMutatorThread) {
         unsafe {
             ((*UPCALLS).resume_from_thread_local_gc)(tls);
