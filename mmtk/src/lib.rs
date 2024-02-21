@@ -123,12 +123,6 @@ pub struct OpenJDK_Upcalls {
     pub request_finished: extern "C" fn(jni_env: *const c_void),
     #[cfg(feature = "thread_local_gc")]
     pub scan_mutator: extern "C" fn(tls: VMMutatorThread, closure: EdgesClosure),
-    // #[cfg(feature = "thread_local_gc")]
-    // pub block_for_thread_local_gc: extern "C" fn(),
-    #[cfg(feature = "thread_local_gc")]
-    pub resume_from_thread_local_gc: extern "C" fn(tls: VMMutatorThread),
-    // #[cfg(feature = "thread_local_gc")]
-    // pub wait_for_thread_local_gc_to_finish: extern "C" fn(),
     pub compute_allocator_mem_layout_checksum: extern "C" fn() -> usize,
     pub compute_mutator_mem_layout_checksum: extern "C" fn() -> usize,
 }

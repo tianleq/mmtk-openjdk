@@ -197,8 +197,6 @@ typedef struct {
     void (*mmtk_request_finished)(void *jni_env);
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
     void (*scan_mutator)(void *tls, EdgesClosure closure);
-    void (*resume_from_thread_local_gc)(void *tls);
-    // void (*mmtk_wait_for_thread_local_gc_to_finish) ();
 #endif
     size_t (*compute_allocator_mem_layout_checksum) ();
     size_t (*compute_mutator_mem_layout_checksum) ();
