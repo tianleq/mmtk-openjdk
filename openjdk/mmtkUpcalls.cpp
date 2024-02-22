@@ -77,6 +77,10 @@ static void mmtk_stop_all_mutators(void *tls, bool scan_mutators_in_safepoint, M
   if (!scan_mutators_in_safepoint) {
     JavaThreadIteratorWithHandle jtiwh;
     while (JavaThread *cur = jtiwh.next()) {
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+    assert(!cur->third_party_heap_mutator.thread_local_gc_status, "global gc and local gc has to be mutually exclusive");
+
+#endif
       closure.invoke((void*)&cur->third_party_heap_mutator);
     }
   }
@@ -426,11 +430,11 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
 
 
 #if COMPILER2_OR_JVMCI
-  // DerivedPointerTable::clear();
+
   thread->ldpt->clear();
 #endif
   // In a thread-local gc, only the thread's stack gets scanned
-  // so probably no need to call the following
+  // so no need to call the following
   // nmethod::oops_do_marking_prologue(); 
 }
 

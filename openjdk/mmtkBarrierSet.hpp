@@ -38,7 +38,7 @@
 #include "utilities/fakeRttiSupport.hpp"
 
 #define MMTK_ENABLE_ALLOCATION_FASTPATH false
-#define MMTK_ENABLE_BARRIER_FASTPATH false
+#define MMTK_ENABLE_BARRIER_FASTPATH true
 
 const intptr_t VO_BIT_BASE_ADDRESS = VO_BIT_ADDRESS;
 
