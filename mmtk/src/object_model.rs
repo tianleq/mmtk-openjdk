@@ -37,10 +37,8 @@ impl ObjectModel<OpenJDK> for VMObjectModel {
     }
 
     #[cfg(feature = "thread_local_gc")]
-    /// Copy an object and return the address of the new object. Usually in the implementation of this method,
-    /// `alloc_copy()` and `post_copy()` from [`GCWorkerCopyContext`](util/copy/struct.GCWorkerCopyContext.html)
-    /// are used for copying.
-    ///
+    /// Copy an object and return the address of the new object. This is executed by mutator iteself
+    /// and therefore is using mutator's allocator
     /// Arguments:
     /// * `from`: The address of the object to be copied.
     /// * `semantics`: The copy semantic to use.

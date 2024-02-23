@@ -455,10 +455,9 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 
 static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
   JavaThread *cur = (JavaThread *) tls;
-  // mmtk_stop_mutator(tls);
-#if COMPILER2_OR_JVMCI
-  DerivedPointerTableDeactivate dpt_deact;
-#endif
+// #if COMPILER2_OR_JVMCI
+//   DerivedPointerTableDeactivate dpt_deact;
+// #endif
   mmtk_scan_roots_in_mutator_thread(closure, tls);
 }
 
