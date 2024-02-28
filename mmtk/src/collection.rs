@@ -48,28 +48,14 @@ impl Collection<OpenJDK> for VMCollection {
         mut object_graph_traversal_func: impl ObjectGraphTraversal<OpenJDKEdge>,
     ) {
         unsafe {
-            ((*UPCALLS).scan_mutator)(
-                tls,
+            ((*UPCALLS).scan_roots_in_mutator_thread)(
                 crate::scanning::to_thread_local_graph_traversal_closure(
                     &mut object_graph_traversal_func,
                 ),
+                tls,
             );
         }
     }
-
-    // #[cfg(feature = "thread_local_gc")]
-    // fn resume_from_thread_local_gc(tls: VMMutatorThread) {
-    //     unsafe {
-    //         ((*UPCALLS).resume_from_thread_local_gc)(tls);
-    //     }
-    // }
-
-    // #[cfg(feature = "thread_local_gc")]
-    // fn wait_for_thread_local_gc_to_finish() {
-    //     unsafe {
-    //         ((*UPCALLS).wait_for_thread_local_gc_to_finish)();
-    //     }
-    // }
 
     fn spawn_gc_thread(tls: VMThread, ctx: GCThreadContext<OpenJDK>) {
         let (ctx_ptr, kind) = match ctx {

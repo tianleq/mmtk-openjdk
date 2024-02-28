@@ -453,13 +453,13 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 
 }
 
-static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
-  JavaThread *cur = (JavaThread *) tls;
-// #if COMPILER2_OR_JVMCI
-//   DerivedPointerTableDeactivate dpt_deact;
-// #endif
-  mmtk_scan_roots_in_mutator_thread(closure, tls);
-}
+// static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
+//   JavaThread *cur = (JavaThread *) tls;
+// // #if COMPILER2_OR_JVMCI
+// //   DerivedPointerTableDeactivate dpt_deact;
+// // #endif
+//   mmtk_scan_roots_in_mutator_thread(closure, tls);
+// }
 
 static void mmtk_execute_local_gc(JavaThread *thread)
 {
@@ -547,9 +547,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_request_end,
   mmtk_request_starting,
   mmtk_request_finished,
-#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-  mmtk_scan_mutator,
-#endif
   compute_allocator_mem_layout_checksum,
   compute_mutator_mem_layout_checksum
 };

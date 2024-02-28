@@ -195,9 +195,6 @@ typedef struct {
     void (*mmtk_request_end)(void *jni_env);
     void (*mmtk_request_starting)(void *jni_env);
     void (*mmtk_request_finished)(void *jni_env);
-#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-    void (*scan_mutator)(void *tls, EdgesClosure closure);
-#endif
     size_t (*compute_allocator_mem_layout_checksum) ();
     size_t (*compute_mutator_mem_layout_checksum) ();
 } OpenJDK_Upcalls;
