@@ -54,11 +54,6 @@ bool third_party_heap_compilation_requested = false;
 static void mmtk_execute_local_gc(JavaThread *thread);
 #endif
 
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-static volatile int global_request_count = 0; 
-Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
-                                              Monitor::_safepoint_check_never);
-#endif
 
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
@@ -358,14 +353,9 @@ static void mmtk_request_start(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS)
   ++mutator->request_id;
-  {
-    MutexLockerEx locker(global_request_id_lock, Mutex::_no_safepoint_check_flag);
-    ++global_request_count;
-    mutator->global_request_id = global_request_count; 
-  }
-  mmtk_clear_object_publication_info(thread);
+  mutator->request_active = true;
 #endif
 }
 
@@ -376,12 +366,7 @@ static void mmtk_request_end(void *jni_env)
   // first need to transition to vm, then transition to a state ready for handshake
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  mmtk_print_object_publication(thread, mutator->global_request_id);
-#endif
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
-  mutator->request_id += 1;
-#endif
+
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
   {
     /*
@@ -408,7 +393,10 @@ static void mmtk_request_end(void *jni_env)
     */
     // Use part of the hotspot handshake mechanism 
     // to do the local gc
-    mmtk_execute_local_gc(thread);
+    // mmtk_execute_local_gc(thread);
+#if defined(MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS)
+    mutator->request_active = false;
+#endif
   }
 
 #endif

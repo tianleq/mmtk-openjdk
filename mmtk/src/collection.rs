@@ -42,6 +42,7 @@ impl Collection<OpenJDK> for VMCollection {
             ((*UPCALLS).block_for_gc)();
         }
     }
+
     #[cfg(feature = "thread_local_gc")]
     fn scan_mutator(
         tls: VMMutatorThread,

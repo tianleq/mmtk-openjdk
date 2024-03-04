@@ -248,7 +248,6 @@ extern void mmtk_inc_leak_count(unsigned callsite);
 #endif
 
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-extern void mmtk_print_object_publication(void *tls, int id);
 extern void mmtk_clear_object_publication_info(void *tls);
 #endif
 
