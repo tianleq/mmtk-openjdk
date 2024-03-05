@@ -122,8 +122,10 @@ struct MutatorConfig {
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   RustDynPtr thread_local_prepare_func;
   RustDynPtr thread_local_release_func;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
   RustDynPtr thread_local_alloc_copy_func;
   RustDynPtr thread_local_post_copy_func;
+#endif
 #endif
 };
 
