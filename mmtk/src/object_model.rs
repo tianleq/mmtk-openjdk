@@ -36,7 +36,7 @@ impl ObjectModel<OpenJDK> for VMObjectModel {
         to_obj
     }
 
-    #[cfg(feature = "thread_local_gc")]
+    #[cfg(feature = "thread_local_gc_copying")]
     /// Copy an object and return the address of the new object. This is executed by mutator iteself
     /// and therefore is using mutator's allocator
     /// Arguments:

@@ -37,9 +37,17 @@ endif
 
 ifeq ($(THREAD_LOCAL_GC), 1)
   ifndef GC_FEATURES
-    GC_FEATURES=--features thread_local_gc
+    GC_FEATURES=--features thread_local_gc_ibm_style
   else
-    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc"
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_ibm_style"
+  endif
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 2)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features thread_local_gc_copying
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying"
   endif
 endif
 
