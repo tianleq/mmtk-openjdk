@@ -61,9 +61,8 @@ struct ImmixAllocator {
   uint8_t line_opt_tag;
   uintptr_t line_opt;
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-  uint8_t block_header_opt_tag;
-  uintptr_t block_header_opt;
   uintptr_t local_blocks;
+  uintptr_t local_free_blocks;
   uint8_t local_line_mark_state;
   uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
