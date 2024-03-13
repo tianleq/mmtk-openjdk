@@ -63,14 +63,11 @@ struct ImmixAllocator {
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   uintptr_t local_blocks;
   uintptr_t local_free_blocks;
+  uintptr_t local_reusable_blocks;
   uint8_t local_line_mark_state;
   uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
 #endif
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
-  uintptr_t blocks;
-#endif
-
 };
 
 struct FLBlock {
