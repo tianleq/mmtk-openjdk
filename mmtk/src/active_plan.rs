@@ -62,4 +62,9 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
     fn number_of_mutators() -> usize {
         unsafe { ((*UPCALLS).number_of_mutators)() }
     }
+
+    fn execute_thread_local_gc(tls: VMMutatorThread) {
+        let plan = SINGLETON.get_plan();
+        plan.do_thread_local_collection(tls, &SINGLETON);
+    }
 }
