@@ -365,7 +365,6 @@ static void mmtk_request_start(void *jni_env)
     ++global_request_count;
     mutator->global_request_id = global_request_count; 
   }
-  mmtk_clear_object_publication_info(thread);
 #endif
 }
 
@@ -376,43 +375,16 @@ static void mmtk_request_end(void *jni_env)
   // first need to transition to vm, then transition to a state ready for handshake
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  mmtk_print_object_publication(thread, mutator->global_request_id);
-#endif
+
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
   mutator->request_id += 1;
 #endif
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
   {
-    /*
-     *    
-      void HandshakeState::process_self_inner(JavaThread* thread) {
-        assert(Thread::current() == thread, "should call from thread");
-        assert(!thread->is_terminated(), "should not be a terminated thread");
-
-        ThreadInVMForHandshake tivm(thread);
-        if (!_semaphore.trywait()) {
-          _semaphore.wait_with_safepoint_check(thread);
-        }
-        HandshakeOperation* op = OrderAccess::load_acquire(&_operation);
-        if (op != NULL) {
-          HandleMark hm(thread);
-          CautiouslyPreserveExceptionMark pem(thread);
-          // Disarm before execute the operation
-          clear_handshake(thread);
-          op->do_handshake(thread);
-        }
-        _semaphore.signal();
-      }
-    *
-    */
-    // Use part of the hotspot handshake mechanism 
-    // to do the local gc
-    mmtk_execute_local_gc(thread);
+    // mmtk_execute_local_gc(thread);
   }
 
 #endif
-  // ::mmtk_request_global_gc(thread);
 }
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
@@ -438,9 +410,7 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
   // nmethod::oops_do_marking_prologue(); 
 }
 
-// This function is called by gc thread
 static void mmtk_thread_local_gc_epilogue(Thread *thread) {
-  // nmethod::oops_do_marking_epilogue();
 #if COMPILER2_OR_JVMCI
   // DerivedPointerTable::update_pointers();
   thread->ldpt->update_pointers();
@@ -452,14 +422,6 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
   }
 
 }
-
-// static void mmtk_scan_mutator(void *tls, EdgesClosure closure) {
-//   JavaThread *cur = (JavaThread *) tls;
-// // #if COMPILER2_OR_JVMCI
-// //   DerivedPointerTableDeactivate dpt_deact;
-// // #endif
-//   mmtk_scan_roots_in_mutator_thread(closure, tls);
-// }
 
 static void mmtk_execute_local_gc(JavaThread *thread)
 {
@@ -493,6 +455,12 @@ static void mmtk_execute_local_gc(JavaThread *thread)
   ::mmtk_do_local_gc(thread);
   mmtk_thread_local_gc_epilogue(thread);
 }
+
+static void mmtk_request_thread_local_gc(void *tls)
+{
+  mmtk_execute_local_gc((JavaThread *) tls);
+}
+
 #endif
 
 static size_t compute_allocator_mem_layout_checksum() {
@@ -548,5 +516,8 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_request_starting,
   mmtk_request_finished,
   compute_allocator_mem_layout_checksum,
-  compute_mutator_mem_layout_checksum
+  compute_mutator_mem_layout_checksum,
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  mmtk_request_thread_local_gc,
+#endif
 };

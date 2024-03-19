@@ -123,6 +123,8 @@ pub struct OpenJDK_Upcalls {
     pub request_finished: extern "C" fn(jni_env: *const c_void),
     pub compute_allocator_mem_layout_checksum: extern "C" fn() -> usize,
     pub compute_mutator_mem_layout_checksum: extern "C" fn() -> usize,
+    #[cfg(feature = "thread_local_gc")]
+    pub request_thread_local_gc: extern "C" fn(tls: VMMutatorThread),
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();

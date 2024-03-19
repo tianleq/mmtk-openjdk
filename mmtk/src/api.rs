@@ -575,15 +575,3 @@ pub extern "C" fn mmtk_request_starting_impl() {
 pub extern "C" fn mmtk_request_finished_impl() {
     memory_manager::request_finished(&SINGLETON);
 }
-
-#[cfg(feature = "public_object_analysis")]
-#[no_mangle]
-pub extern "C" fn mmtk_print_object_publication(tls: VMMutatorThread, id: i32) {
-    memory_manager::mmtk_print_object_publication::<OpenJDK>(tls, id);
-}
-
-#[cfg(feature = "public_object_analysis")]
-#[no_mangle]
-pub extern "C" fn mmtk_clear_object_publication_info(tls: VMMutatorThread) {
-    memory_manager::mmtk_clear_object_publication_info::<OpenJDK>(tls);
-}

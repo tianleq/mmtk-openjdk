@@ -197,6 +197,9 @@ typedef struct {
     void (*mmtk_request_finished)(void *jni_env);
     size_t (*compute_allocator_mem_layout_checksum) ();
     size_t (*compute_mutator_mem_layout_checksum) ();
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+    void (*request_thread_local_gc) (void *tls);
+#endif
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -245,11 +248,6 @@ extern void mmtk_do_local_gc(void *tls);
 
 #ifdef DEBUG_PUBLISH_OBJECT
 extern void mmtk_inc_leak_count(unsigned callsite);
-#endif
-
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-extern void mmtk_print_object_publication(void *tls, int id);
-extern void mmtk_clear_object_publication_info(void *tls);
 #endif
 
 
