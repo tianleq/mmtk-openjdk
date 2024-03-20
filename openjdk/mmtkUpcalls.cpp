@@ -42,8 +42,8 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
-extern "C" JNIEXPORT void pns2();
-extern "C" void breakpoint();
+// extern "C" JNIEXPORT void pns2();
+// extern "C" void breakpoint();
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
@@ -359,7 +359,6 @@ static void mmtk_request_start(void *jni_env)
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  ++mutator->request_id;
   {
     MutexLockerEx locker(global_request_id_lock, Mutex::_no_safepoint_check_flag);
     ++global_request_count;

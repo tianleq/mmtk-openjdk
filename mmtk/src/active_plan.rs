@@ -63,6 +63,7 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
         unsafe { ((*UPCALLS).number_of_mutators)() }
     }
 
+    #[cfg(feature = "thread_local_gc")]
     fn request_thread_local_gc(tls: VMMutatorThread) {
         unsafe {
             ((*UPCALLS).request_thread_local_gc)(tls);
