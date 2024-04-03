@@ -64,9 +64,9 @@ impl ActivePlan<OpenJDK> for VMActivePlan {
     }
 
     #[cfg(feature = "thread_local_gc")]
-    fn request_thread_local_gc(tls: VMMutatorThread) {
+    fn execute_thread_local_gc(tls: VMMutatorThread) {
         unsafe {
-            ((*UPCALLS).request_thread_local_gc)(tls);
+            ((*UPCALLS).execute_thread_local_gc)(tls);
         }
     }
 }

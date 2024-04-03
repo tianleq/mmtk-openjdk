@@ -527,11 +527,16 @@ pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
 
 #[cfg(feature = "thread_local_gc")]
 #[no_mangle]
-pub extern "C" fn mmtk_do_local_gc(_tls: VMMutatorThread) {
-    #[cfg(feature = "thread_local_gc")]
+pub extern "C" fn mmtk_request_thread_local_gc(_tls: VMMutatorThread) {
+    if memory_manager::mmtk_request_thread_local_gc::<OpenJDK>(&SINGLETON, _tls) {
+        unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
+    }
+}
+
+#[cfg(feature = "thread_local_gc")]
+#[no_mangle]
+pub extern "C" fn mmtk_do_thread_local_gc(_tls: VMMutatorThread) {
     memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, _tls);
-    #[cfg(not(feature = "thread_local_gc"))]
-    unimplemented!()
 }
 
 #[no_mangle]
@@ -553,7 +558,6 @@ pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
 #[no_mangle]
 pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
     OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
-    // panic!("callsite: {} object leak in JIT compiler thread", _callsite);
 }
 
 #[no_mangle]

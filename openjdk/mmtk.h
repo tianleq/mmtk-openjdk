@@ -198,7 +198,7 @@ typedef struct {
     size_t (*compute_allocator_mem_layout_checksum) ();
     size_t (*compute_mutator_mem_layout_checksum) ();
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-    void (*request_thread_local_gc) (void *tls);
+    void (*execute_thread_local_gc) (void *tls);
 #endif
 } OpenJDK_Upcalls;
 
@@ -243,7 +243,8 @@ extern bool mmtk_is_object_published(void *object);
 #endif
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-extern void mmtk_do_local_gc(void *tls);
+extern void mmtk_do_thread_local_gc(void *tls);
+extern void mmtk_request_thread_local_gc(void *tls);
 #endif
 
 #ifdef DEBUG_PUBLISH_OBJECT

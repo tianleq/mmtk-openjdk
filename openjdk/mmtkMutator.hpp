@@ -142,7 +142,7 @@ struct MMTkMutatorContext {
 #ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
   size_t allocation_count;
   size_t bytes_allocated;
-  unsigned global_request_id;
+  unsigned copy_bytes;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

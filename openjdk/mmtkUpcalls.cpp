@@ -50,14 +50,6 @@ Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "Th
                                                              Monitor::_safepoint_check_sometimes);
 int32_t third_party_heap_active_local_gc_count = 0;
 bool third_party_heap_compilation_requested = false;
-
-static void mmtk_execute_local_gc(JavaThread *thread);
-#endif
-
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-static volatile int global_request_count = 0; 
-Monitor* global_request_id_lock = new Monitor(Mutex::nonleaf, "GlobalRequestID_Lock", true,
-                                              Monitor::_safepoint_check_never);
 #endif
 
 // Note: This counter must be accessed using the Atomic class.
@@ -358,12 +350,8 @@ static void mmtk_request_start(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  {
-    MutexLockerEx locker(global_request_id_lock, Mutex::_no_safepoint_check_flag);
-    ++global_request_count;
-    mutator->global_request_id = global_request_count; 
-  }
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+  mutator->request_id += 1;
 #endif
 }
 
@@ -375,14 +363,16 @@ static void mmtk_request_end(void *jni_env)
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
 
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
-  mutator->request_id += 1;
-#endif
+
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
   {
-    // mmtk_execute_local_gc(thread);
+    mmtk_request_thread_local_gc(thread);
   }
+#endif
 
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS)
+  mutator->copy_bytes = 0;
+  mutator->bytes_allocated = 0;
 #endif
 }
 
@@ -422,8 +412,9 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 
 }
 
-static void mmtk_execute_local_gc(JavaThread *thread)
+static void mmtk_execute_thread_local_gc(void *tls)
 {
+  JavaThread *thread = (JavaThread *) tls;
   mmtk_thread_local_gc_prologue(thread);
   /*
     *    
@@ -451,14 +442,10 @@ static void mmtk_execute_local_gc(JavaThread *thread)
   // to do the local gc
   ThreadInVMForHandshake tivm(thread);
   // Trigger a local gc
-  ::mmtk_do_local_gc(thread);
+  ::mmtk_do_thread_local_gc(thread);
   mmtk_thread_local_gc_epilogue(thread);
 }
 
-static void mmtk_request_thread_local_gc(void *tls)
-{
-  mmtk_execute_local_gc((JavaThread *) tls);
-}
 
 #endif
 
@@ -517,6 +504,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   compute_allocator_mem_layout_checksum,
   compute_mutator_mem_layout_checksum,
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-  mmtk_request_thread_local_gc,
+  mmtk_execute_thread_local_gc,
 #endif
 };
