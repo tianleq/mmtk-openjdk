@@ -57,7 +57,8 @@ impl OopIterate for InstanceMirrorKlass {
         closure: &mut impl EdgeVisitor<E<COMPRESSED>>,
     ) {
         self.instance_klass.oop_iterate::<COMPRESSED>(oop, closure);
-
+        #[cfg(feature = "debug_publish_object")]
+        let _source = ObjectReference::from(oop);
         // static fields
         let start = Self::start_of_static_fields(oop);
         let len = Self::static_oop_field_count(oop);
@@ -68,13 +69,12 @@ impl OopIterate for InstanceMirrorKlass {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(narrow_oop.slot().into());
                 #[cfg(feature = "debug_publish_object")]
-                panic!("compressed pointer is not supported");
+                closure.visit_edge(_source, narrow_oop.slot().into());
             }
         } else {
             let start: *const Oop = start.to_ptr::<Oop>();
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
-            #[cfg(feature = "debug_publish_object")]
-            let _source = ObjectReference::from(oop);
+
             for oop in slice {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(Address::from_ref(oop as &Oop).into());
@@ -102,17 +102,16 @@ impl OopIterate for ObjArrayKlass {
         closure: &mut impl EdgeVisitor<E<COMPRESSED>>,
     ) {
         let array = unsafe { oop.as_array_oop() };
+        #[cfg(feature = "debug_publish_object")]
+        let _source = ObjectReference::from(oop);
         if COMPRESSED {
             for narrow_oop in unsafe { array.data::<NarrowOop, COMPRESSED>(BasicType::T_OBJECT) } {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(narrow_oop.slot().into());
                 #[cfg(feature = "debug_publish_object")]
-                // closure.visit_edge(narrow_oop, narrow_oop.slot().into());
-                panic!("compressed pointer is not supported");
+                closure.visit_edge(_source, narrow_oop.slot().into());
             }
         } else {
-            #[cfg(feature = "debug_publish_object")]
-            let _source = ObjectReference::from(oop);
             for oop in unsafe { array.data::<Oop, COMPRESSED>(BasicType::T_OBJECT) } {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(Address::from_ref(oop as &Oop).into());

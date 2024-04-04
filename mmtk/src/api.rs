@@ -664,57 +664,59 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
 #[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
-    if crate::use_compressed_oops() {
-        panic!("compressed pointer not supported")
-    } else {
-        memory_manager::mmtk_set_public_bit::<OpenJDK<false>>(crate::singleton::<false>(), object);
-        0
-    }
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
+    0
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
-    if crate::use_compressed_oops() {
-        panic!("compressed pointer not supported")
-    }
-    memory_manager::mmtk_publish_object::<OpenJDK<false>>(crate::singleton::<false>(), object);
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object));
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
-    if crate::use_compressed_oops() {
-        panic!("compressed pointer not supported")
-    }
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
     memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object)
 }
 
 #[cfg(feature = "thread_local_gc")]
 #[no_mangle]
 pub extern "C" fn mmtk_request_thread_local_gc(_tls: VMMutatorThread) {
-    if crate::use_compressed_oops() {
-        panic!("compressed pointer not supported")
-    }
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
 
-    if memory_manager::mmtk_request_thread_local_gc::<OpenJDK<false>>(
-        crate::singleton::<false>(),
-        _tls,
-    ) {
-        unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
-    }
+    with_singleton!(
+        |singleton| if memory_manager::mmtk_request_thread_local_gc(singleton, _tls,) {
+            unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
+        }
+    );
 }
 
 #[cfg(feature = "thread_local_gc")]
 #[no_mangle]
 pub extern "C" fn mmtk_do_thread_local_gc(_tls: VMMutatorThread) {
-    if crate::use_compressed_oops() {
-        panic!("compressed pointer not supported")
-    }
-    memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK<false>>(
-        crate::singleton::<false>(),
-        _tls,
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
     );
+    with_singleton!(
+        |singleton| memory_manager::mmtk_handle_user_triggered_local_gc(singleton, _tls,)
+    )
 }
 
 #[no_mangle]
@@ -722,10 +724,9 @@ pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
     if crate::use_compressed_oops() {
         panic!("compressed pointer not supported")
     }
-    memory_manager::mmtk_handle_user_triggered_global_gc::<OpenJDK<false>>(
-        crate::singleton::<false>(),
-        tls,
-    );
+    with_singleton!(
+        |singleton| memory_manager::mmtk_handle_user_triggered_global_gc(singleton, tls,)
+    )
 }
 
 #[no_mangle]
