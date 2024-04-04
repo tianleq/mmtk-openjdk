@@ -17,6 +17,8 @@ use mmtk::MutatorContext;
 use once_cell::sync;
 use std::cell::RefCell;
 use std::ffi::{CStr, CString};
+#[cfg(feature = "debug_publish_object")]
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 macro_rules! with_singleton {
@@ -47,6 +49,11 @@ macro_rules! with_mutator {
 static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarrier").unwrap());
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
+static PUBLIC_OBJECT_MARKING_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("PublicObjectMarkingBarrier").unwrap());
+
+#[cfg(feature = "debug_publish_object")]
+static OBJECT_LEAK_IN_JIT_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
 pub extern "C" fn get_mmtk_version() -> *const c_char {
@@ -59,6 +66,7 @@ pub extern "C" fn mmtk_active_barrier() -> *const c_char {
         match singleton.get_plan().constraints().barrier {
             BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
             BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+            BarrierSelector::PublicObjectMarkingBarrier => PUBLIC_OBJECT_MARKING_BARRIER.as_ptr(),
             // In case we have more barriers in mmtk-core.
             #[allow(unreachable_patterns)]
             _ => unimplemented!(),
@@ -335,6 +343,16 @@ pub extern "C" fn mmtk_harness_begin_impl() {
 
 #[no_mangle]
 pub extern "C" fn harness_end(_id: usize) {
+    #[cfg(feature = "debug_publish_object")]
+    {
+        println!("********************************************");
+        println!(
+            "{} objects leaked in JIT compiler thread",
+            OBJECT_LEAK_IN_JIT_COUNT.load(Ordering::SeqCst)
+        );
+        println!("********************************************");
+    }
+
     unsafe { ((*UPCALLS).harness_end)() };
 }
 
@@ -471,6 +489,41 @@ fn log_bytes_in_edge() -> usize {
     }
 }
 
+/// Object Array-copy pre-barrier
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_pre(
+    mutator: &'static mut Mutator<OpenJDK>,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << LOG_BYTES_IN_ADDRESS;
+    mutator
+        .barrier()
+        .object_array_copy_pre(src_base, dst_base, src..src + bytes, dst..dst + bytes);
+}
+
+/// Object Array-copy slow-path call
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_slow(
+    mutator: &'static mut Mutator<OpenJDK>,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << LOG_BYTES_IN_ADDRESS;
+    mutator.barrier().object_array_copy_slow(
+        src_base,
+        dst_base,
+        src..src + bytes,
+        dst..dst + bytes,
+    );
+}
+
 /// Array-copy pre-barrier
 #[no_mangle]
 pub extern "C" fn mmtk_array_copy_pre(
@@ -511,8 +564,8 @@ pub extern "C" fn mmtk_object_probable_write(mutator: *mut libc::c_void, obj: Ob
 
 // finalization
 #[no_mangle]
-pub extern "C" fn add_finalizer(object: ObjectReference) {
-    with_singleton!(|singleton| memory_manager::add_finalizer(singleton, object));
+pub extern "C" fn add_finalizer(object: ObjectReference, mutator: &'static mut Mutator<OpenJDK>) {
+    with_singleton!(|singleton| memory_manager::add_finalizer(singleton, mutator, object));
 }
 
 #[no_mangle]
@@ -571,4 +624,78 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
             Ordering::Relaxed,
         );
     }
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
+    memory_manager::mmtk_set_public_bit::<OpenJDK>(&SINGLETON, object);
+    0
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+    memory_manager::mmtk_publish_object::<OpenJDK>(&SINGLETON, object);
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+    memory_manager::mmtk_is_object_published::<OpenJDK>(object)
+}
+
+#[cfg(feature = "thread_local_gc")]
+#[no_mangle]
+pub extern "C" fn mmtk_request_thread_local_gc(_tls: VMMutatorThread) {
+    if memory_manager::mmtk_request_thread_local_gc::<OpenJDK>(&SINGLETON, _tls) {
+        unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
+    }
+}
+
+#[cfg(feature = "thread_local_gc")]
+#[no_mangle]
+pub extern "C" fn mmtk_do_thread_local_gc(_tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_local_gc::<OpenJDK>(&SINGLETON, _tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
+    memory_manager::mmtk_handle_user_triggered_global_gc::<OpenJDK>(&SINGLETON, tls);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_start)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_end)(jni_env) };
+}
+
+#[cfg(feature = "debug_publish_object")]
+#[no_mangle]
+pub extern "C" fn mmtk_inc_leak_count(_callsite: u32) {
+    OBJECT_LEAK_IN_JIT_COUNT.fetch_add(1, Ordering::SeqCst);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_starting)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_finished)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting_impl() {
+    memory_manager::request_starting(&SINGLETON);
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished_impl() {
+    memory_manager::request_finished(&SINGLETON);
 }

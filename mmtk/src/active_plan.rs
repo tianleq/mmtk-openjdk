@@ -56,4 +56,11 @@ impl<const COMPRESSED: bool> ActivePlan<OpenJDK<COMPRESSED>> for VMActivePlan {
     fn number_of_mutators() -> usize {
         unsafe { ((*UPCALLS).number_of_mutators)() }
     }
+
+    #[cfg(feature = "thread_local_gc")]
+    fn execute_thread_local_gc(tls: VMMutatorThread) {
+        unsafe {
+            ((*UPCALLS).execute_thread_local_gc)(tls);
+        }
+    }
 }

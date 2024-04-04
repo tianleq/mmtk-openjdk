@@ -27,6 +27,103 @@ ifeq ($(MMTK_VO_BIT), 1)
   endif
 endif
 
+ifeq ($(PUBLIC_BIT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features public_bit
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",public_bit"
+  endif
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features thread_local_gc_ibm_style
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_ibm_style"
+  endif
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 2)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features thread_local_gc_copying
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying"
+  endif
+endif
+
+ifeq ($(EXTRA_HEADER), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features extra_header
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header
+  endif
+endif
+
+ifeq ($(DEBUG_PUBLISH_OBJECT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features extra_header,debug_publish_object
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header,debug_publish_object"
+  endif
+endif
+
+ifeq ($(ANALYZE_PUBLIC_OBJECT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features public_object_analysis
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",public_object_analysis"
+  endif
+endif
+
+ifeq ($(PUBLIC_BIT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features public_bit
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",public_bit"
+  endif
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features thread_local_gc_ibm_style
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_ibm_style"
+  endif
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 2)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features thread_local_gc_copying
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying"
+  endif
+endif
+
+ifeq ($(EXTRA_HEADER), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features extra_header
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header
+  endif
+endif
+
+ifeq ($(DEBUG_PUBLISH_OBJECT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features extra_header,debug_publish_object
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header,debug_publish_object"
+  endif
+endif
+
+ifeq ($(ANALYZE_PUBLIC_OBJECT), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features public_object_analysis
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",public_object_analysis"
+  endif
+endif
+
+
 ifeq ($(MMTK_MARK_IN_HEADER), 1)
   ifndef GC_FEATURES
     GC_FEATURES=--features mark_bit_in_header
@@ -88,6 +185,36 @@ JVM_SRC_DIRS += $(MMTK_CPP_ROOT) $(MMTK_CPP_ROOT)/barriers
 JVM_CFLAGS += -std=c++11 -DINCLUDE_THIRD_PARTY_HEAP -DTHIRD_PARTY_HEAP_SRC=$(MMTK_CPP_ROOT)
 ifeq ($(MMTK_VO_BIT), 1)
   JVM_CFLAGS += -DMMTK_ENABLE_VO_BIT
+endif
+
+ifeq ($(PUBLIC_BIT), 1)
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
+endif
+
+ifeq ($(EXTRA_HEADER), 1)
+  JVM_CFLAGS += -DMMTK_ENABLE_EXTRA_HEADER
+endif
+
+ifeq ($(ANALYZE_PUBLIC_OBJECT), 1)
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 1)
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
+  JVM_CFLAGS += -DMMTK_ENABLE_THREAD_LOCAL_GC
+endif
+
+ifeq ($(THREAD_LOCAL_GC), 2)
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
+  JVM_CFLAGS += -DMMTK_ENABLE_THREAD_LOCAL_GC_COPYING
+  JVM_CFLAGS += -DMMTK_ENABLE_THREAD_LOCAL_GC
+endif
+
+ifeq ($(DEBUG_PUBLISH_OBJECT), 1)
+  JVM_CFLAGS += -DMMTK_ENABLE_DEBUG_PUBLISH_OBJECT
+  JVM_CFLAGS += -DMMTK_ENABLE_EXTRA_HEADER
+  JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
 endif
 
 $(BUILD_LIBJVM): $(LIB_MMTK)

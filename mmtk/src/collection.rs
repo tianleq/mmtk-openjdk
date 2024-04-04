@@ -1,10 +1,13 @@
-use mmtk::util::alloc::AllocationError;
-use mmtk::util::opaque_pointer::*;
-use mmtk::vm::{Collection, GCThreadContext};
-use mmtk::Mutator;
-
+#[cfg(feature = "thread_local_gc")]
+use crate::OpenJDKEdge;
 use crate::UPCALLS;
 use crate::{MutatorClosure, OpenJDK};
+use mmtk::util::alloc::AllocationError;
+use mmtk::util::opaque_pointer::*;
+#[cfg(feature = "thread_local_gc")]
+use mmtk::vm::ObjectGraphTraversal;
+use mmtk::vm::{Collection, GCThreadContext};
+use mmtk::Mutator;
 
 pub struct VMCollection {}
 
@@ -33,6 +36,21 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
     fn block_for_gc(_tls: VMMutatorThread) {
         unsafe {
             ((*UPCALLS).block_for_gc)();
+        }
+    }
+
+    #[cfg(feature = "thread_local_gc")]
+    fn scan_mutator(
+        tls: VMMutatorThread,
+        mut object_graph_traversal_func: impl ObjectGraphTraversal<OpenJDKEdge>,
+    ) {
+        unsafe {
+            ((*UPCALLS).scan_roots_in_mutator_thread)(
+                crate::scanning::to_thread_local_graph_traversal_closure(
+                    &mut object_graph_traversal_func,
+                ),
+                tls,
+            );
         }
     }
 

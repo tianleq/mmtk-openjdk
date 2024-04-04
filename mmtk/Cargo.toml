@@ -34,7 +34,7 @@ memoffset = "0.9.0"
 # But other changes including adding/removing whitespaces in commented lines may break the CI.
 mmtk = { git = "https://github.com/mmtk/mmtk-core.git", rev = "2d3677d6a0099d1ff561f5668bf89b432f7cad00" }
 # Uncomment the following to build locally
-# mmtk = { path = "../repos/mmtk-core" }
+mmtk = { path = "../../mmtk-core" }
 
 [build-dependencies]
 built = { version = "0.7.1", features = ["git2"] }
@@ -47,6 +47,23 @@ nogc_no_zeroing = ["mmtk/nogc_no_zeroing"]
 # Use the env var MMTK_VO_BIT=1 when building OpenJDK so the fastpath for setting the alloc bit will be compiled in.
 # See README.
 vo_bit = ["mmtk/vo_bit"]
+
+# Use the env var EXTRA_HEADER=1 when building OpenJDK so the fastpath for allocating extra header will be compiled in.
+# See README.
+extra_header = ["mmtk/extra_header"]
+
+public_bit = ["mmtk/public_bit"]
+debug_publish_object = ["mmtk/debug_publish_object", "public_bit"]
+#Enable thread local gc
+thread_local_gc = ["mmtk/thread_local_gc", "public_bit"]
+
+#Enable thread local gc
+thread_local_gc_ibm_style = ["mmtk/thread_local_gc_ibm_style", "thread_local_gc"]
+
+#Enable thread local gc
+thread_local_gc_copying = ["mmtk/thread_local_gc_copying", "thread_local_gc"]
+
+public_object_analysis = ["mmtk/public_object_analysis", "public_bit"]
 
 # This compile time constant places the mark bit in the header of the object instead of on the side.
 mark_bit_in_header = []

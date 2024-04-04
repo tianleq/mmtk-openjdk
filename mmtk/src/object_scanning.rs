@@ -26,9 +26,13 @@ impl OopIterate for OopMapBlock {
     ) {
         let log_bytes_in_oop = if COMPRESSED { 2 } else { 3 };
         let start = oop.get_field_address(self.offset);
+        let _source = ObjectReference::from(oop);
         for i in 0..self.count as usize {
             let edge = (start + (i << log_bytes_in_oop)).into();
+            #[cfg(not(feature = "debug_publish_object"))]
             closure.visit_edge(edge);
+            #[cfg(feature = "debug_publish_object")]
+            closure.visit_edge(_source, edge);
         }
     }
 }
@@ -66,8 +70,12 @@ impl OopIterate for InstanceMirrorKlass {
         } else {
             let start: *const Oop = start.to_ptr::<Oop>();
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
+            let _source = ObjectReference::from(oop);
             for oop in slice {
-                closure.visit_edge(Address::from_ref(oop as &Oop).into());
+                #[cfg(not(feature = "debug_publish_object"))]
+                closure.visit_edge(Address::from_ref(oop as &Oop).into().into());
+                #[cfg(feature = "debug_publish_object")]
+                closure.visit_edge(_source, Address::from_ref(oop as &Oop).into());
             }
         }
     }
@@ -91,12 +99,16 @@ impl OopIterate for ObjArrayKlass {
     ) {
         let array = unsafe { oop.as_array_oop() };
         if COMPRESSED {
+            let _source = ObjectReference::from(oop);
             for narrow_oop in unsafe { array.data::<NarrowOop, COMPRESSED>(BasicType::T_OBJECT) } {
                 closure.visit_edge(narrow_oop.slot().into());
             }
         } else {
             for oop in unsafe { array.data::<Oop, COMPRESSED>(BasicType::T_OBJECT) } {
-                closure.visit_edge(Address::from_ref(oop as &Oop).into());
+                #[cfg(not(feature = "debug_publish_object"))]
+                closure.visit_edge(Address::from_ref(oop as &Oop).into().into());
+                #[cfg(feature = "debug_publish_object")]
+                closure.visit_edge(_source, Address::from_ref(oop as &Oop).into());
             }
         }
     }
@@ -154,10 +166,18 @@ impl InstanceRefKlass {
         oop: Oop,
         closure: &mut impl EdgeVisitor<E<COMPRESSED>>,
     ) {
+        let _source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address::<COMPRESSED>(oop);
-        closure.visit_edge(referent_addr);
+        #[cfg(not(feature = "debug_publish_object"))]
+        closure.visit_edge(referent_addr.into());
+        #[cfg(feature = "debug_publish_object")]
+        closure.visit_edge(_source, referent_addr.into());
+
         let discovered_addr = Self::discovered_address::<COMPRESSED>(oop);
-        closure.visit_edge(discovered_addr);
+        #[cfg(not(feature = "debug_publish_object"))]
+        closure.visit_edge(discovered_addr.into());
+        #[cfg(feature = "debug_publish_object")]
+        closure.visit_edge(_source, discovered_addr.into());
     }
 }
 

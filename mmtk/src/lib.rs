@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 pub use edges::use_compressed_oops;
 use edges::{OpenJDKEdge, OpenJDKEdgeRange};
+use edges::{OpenJDKEdge, OpenJDKEdgeRange};
 use libc::{c_char, c_void, uintptr_t};
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::constants::LOG_BYTES_IN_GBYTE;
@@ -75,6 +76,7 @@ pub struct EdgesClosure {
         size: usize,
         cap: usize,
         data: *mut libc::c_void,
+        vm_roots_type: u8,
     ) -> NewBuffer,
     pub data: *const libc::c_void,
 }
@@ -118,6 +120,14 @@ pub struct OpenJDK_Upcalls {
     pub schedule_finalizer: extern "C" fn(),
     pub prepare_for_roots_re_scanning: extern "C" fn(),
     pub enqueue_references: extern "C" fn(objects: *const ObjectReference, len: usize),
+    pub request_start: extern "C" fn(jni_env: *const c_void),
+    pub request_end: extern "C" fn(jni_env: *const c_void),
+    pub request_starting: extern "C" fn(jni_env: *const c_void),
+    pub request_finished: extern "C" fn(jni_env: *const c_void),
+    pub compute_allocator_mem_layout_checksum: extern "C" fn() -> usize,
+    pub compute_mutator_mem_layout_checksum: extern "C" fn() -> usize,
+    #[cfg(feature = "thread_local_gc")]
+    pub execute_thread_local_gc: extern "C" fn(tls: VMMutatorThread),
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();
@@ -137,6 +147,14 @@ pub static VO_BIT_ADDRESS: uintptr_t =
 #[no_mangle]
 pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
     std::mem::size_of::<mmtk::util::alloc::FreeListAllocator<OpenJDK<false>>>();
+
+#[no_mangle]
+pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
+    mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
+
+#[no_mangle]
+pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
+    mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
 
 #[derive(Default)]
 pub struct OpenJDK<const COMPRESSED: bool>;
@@ -230,3 +248,7 @@ fn set_compressed_pointer_vm_layout(builder: &mut MMTKBuilder) {
     };
     builder.set_vm_layout(constants);
 }
+
+#[cfg(feature = "extra_header")]
+#[no_mangle]
+pub static MMTK_EXTRA_HEADER_BYTES: usize = <OpenJDK as VMBinding>::EXTRA_HEADER_BYTES;

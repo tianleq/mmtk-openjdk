@@ -10,8 +10,8 @@ GCArguments* new_gc_arguments() {
   return NULL;
 }
 
-void register_finalizer(void* obj) {
-  add_finalizer(obj);
+void register_finalizer(void* obj, Thread *thread) {
+  add_finalizer(obj, &thread->third_party_heap_mutator);
 }
 
 };

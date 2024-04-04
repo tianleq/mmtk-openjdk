@@ -76,6 +76,7 @@ public:
 
   virtual HeapWord* mem_allocate(size_t size, bool* gc_overhead_limit_was_exceeded);
   HeapWord* mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_was_exceeded);
+  virtual oop class_allocate(Klass* klass, int size, TRAPS);
 
   MMTkVMCompanionThread* companion_thread() const {
     return _companion_thread;
@@ -184,7 +185,7 @@ public:
 
   // An object is scavengable if its location may move during a scavenge.
   // (A scavenge is a GC which is not a full GC.)
-  inline bool is_scavengable(oop obj) { return true; }
+  virtual inline bool is_scavengable(oop obj) { return true; }
   // Registering and unregistering an nmethod (compiled code) with the heap.
   // Override with specific mechanism for each specialized heap type.
   virtual void register_nmethod(nmethod* nm);

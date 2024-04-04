@@ -50,6 +50,9 @@ void MMTkBarrierSetAssembler::eden_allocate(MacroAssembler* masm, Register threa
     assert(MMTkMutatorContext::max_non_los_default_alloc_bytes != 0, "max_non_los_default_alloc_bytes hasn't been initialized");
     size_t max_non_los_bytes = MMTkMutatorContext::max_non_los_default_alloc_bytes;
     size_t extra_header = 0;
+#ifdef MMTK_ENABLE_EXTRA_HEADER
+    extra_header = MMTK_EXTRA_HEADER_BYTES;
+#endif
     // fastpath, we only use default allocator
     Allocator allocator = AllocatorDefault;
     // We need to figure out which allocator we are using by querying MMTk.
@@ -98,38 +101,38 @@ void MMTkBarrierSetAssembler::eden_allocate(MacroAssembler* masm, Register threa
     __ jcc(Assembler::above, slow_case);
     // lab.cursor = end
     __ movptr(cursor, end);
-  bool enable_vo_bit = false;
-  #ifdef MMTK_ENABLE_VO_BIT
-  enable_vo_bit = true;
-  #endif
-  if (enable_vo_bit || selector.tag == TAG_MARK_COMPACT) {
-    Register tmp3 = rdi;
-    Register tmp2 = rscratch1;
-    assert_different_registers(obj, tmp2, tmp3, rcx);
+    bool enable_vo_bit = false;
+#ifdef MMTK_ENABLE_VO_BIT
+    enable_vo_bit = true;
+#endif
+    if (enable_vo_bit || selector.tag == TAG_MARK_COMPACT) {
+      Register tmp3 = rdi;
+      Register tmp2 = rscratch1;
+      assert_different_registers(obj, tmp2, tmp3, rcx);
 
-    // tmp2 = load-byte (SIDE_METADATA_BASE_ADDRESS + (obj >> 6));
-    __ movptr(tmp3, obj);
-    __ shrptr(tmp3, 6);
-    __ movptr(tmp2, VO_BIT_BASE_ADDRESS);
-    __ movb(tmp2, Address(tmp2, tmp3));
-    // tmp3 = 1 << ((obj >> 3) & 7)
-    //   1. rcx = (obj >> 3) & 7
-    __ movptr(rcx, obj);
-    __ shrptr(rcx, 3);
-    __ andptr(rcx, 7);
-    //   2. tmp3 = 1 << rcx
-    __ movptr(tmp3, 1);
-    __ shlptr(tmp3);
-    // tmp2 = tmp2 | tmp3
-    __ orptr(tmp2, tmp3);
+      // tmp2 = load-byte (SIDE_METADATA_BASE_ADDRESS + (obj >> 6));
+      __ movptr(tmp3, obj);
+      __ shrptr(tmp3, 6);
+      __ movptr(tmp2, VO_BIT_BASE_ADDRESS);
+      __ movb(tmp2, Address(tmp2, tmp3));
+      // tmp3 = 1 << ((obj >> 3) & 7)
+      //   1. rcx = (obj >> 3) & 7
+      __ movptr(rcx, obj);
+      __ shrptr(rcx, 3);
+      __ andptr(rcx, 7);
+      //   2. tmp3 = 1 << rcx
+      __ movptr(tmp3, 1);
+      __ shlptr(tmp3);
+      // tmp2 = tmp2 | tmp3
+      __ orptr(tmp2, tmp3);
 
-    // store-byte tmp2 (SIDE_METADATA_BASE_ADDRESS + (obj >> 6))
-    __ movptr(tmp3, obj);
-    __ shrptr(tmp3, 6);
-    __ movptr(rcx, VO_BIT_BASE_ADDRESS);
-    __ movb(Address(rcx, tmp3), tmp2);
-  }
-
+      // store-byte tmp2 (SIDE_METADATA_BASE_ADDRESS + (obj >> 6))
+      __ movptr(tmp3, obj);
+      __ shrptr(tmp3, 6);
+      __ movptr(rcx, VO_BIT_BASE_ADDRESS);
+      __ movb(Address(rcx, tmp3), tmp2);
+    }
+  
     // BarrierSetAssembler::incr_allocated_bytes
     if (var_size_in_bytes->is_valid()) {
       __ addq(Address(r15_thread, in_bytes(JavaThread::allocated_bytes_offset())), var_size_in_bytes);

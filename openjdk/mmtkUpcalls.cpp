@@ -42,6 +42,16 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
+// extern "C" JNIEXPORT void pns2();
+// extern "C" void breakpoint();
+
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
+                                                             Monitor::_safepoint_check_sometimes);
+int32_t third_party_heap_active_local_gc_count = 0;
+bool third_party_heap_compilation_requested = false;
+#endif
+
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 
@@ -58,6 +68,10 @@ static void mmtk_stop_all_mutators(void *tls, MutatorClosure closure) {
 
   JavaThreadIteratorWithHandle jtiwh;
   while (JavaThread *cur = jtiwh.next()) {
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+    assert(!cur->third_party_heap_mutator.thread_local_gc_status, "global gc and local gc has to be mutually exclusive");
+
+#endif
     closure.invoke((void*)&cur->third_party_heap_mutator);
   }
 
@@ -119,6 +133,7 @@ static void mmtk_spawn_gc_thread(void* tls, int kind, void* ctx) {
     }
   }
 }
+
 
 static void mmtk_block_for_gc() {
   MMTkHeap::heap()->_last_gc_time = os::javaTimeNanos() / NANOSECS_PER_MILLISEC;
@@ -195,6 +210,7 @@ static void mmtk_scan_roots_in_mutator_thread(EdgesClosure closure, void* tls) {
   thread->oops_do(&cl, NULL);
 }
 
+
 static void mmtk_scan_object(void* trace, void* object, void* tls) {
   MMTkScanObjectClosure cl(trace);
   ((oop) object)->oop_iterate(&cl);
@@ -268,18 +284,18 @@ static void mmtk_schedule_finalizer() {
   MMTkHeap::heap()->schedule_finalizer();
 }
 
-static void mmtk_scan_universe_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_universe_roots(cl); }
-static void mmtk_scan_jni_handle_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_jni_handle_roots(cl); }
-static void mmtk_scan_object_synchronizer_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_object_synchronizer_roots(cl); }
-static void mmtk_scan_management_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_management_roots(cl); }
-static void mmtk_scan_jvmti_export_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_jvmti_export_roots(cl); }
-static void mmtk_scan_aot_loader_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_aot_loader_roots(cl); }
-static void mmtk_scan_system_dictionary_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_system_dictionary_roots(cl); }
-static void mmtk_scan_code_cache_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_code_cache_roots(cl); }
-static void mmtk_scan_string_table_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_string_table_roots(cl); }
-static void mmtk_scan_class_loader_data_graph_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_class_loader_data_graph_roots(cl); }
-static void mmtk_scan_weak_processor_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_weak_processor_roots(cl); }
-static void mmtk_scan_vm_thread_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_vm_thread_roots(cl); }
+static void mmtk_scan_universe_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 1); MMTkHeap::heap()->scan_universe_roots(cl); }
+static void mmtk_scan_jni_handle_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 2); MMTkHeap::heap()->scan_jni_handle_roots(cl); }
+static void mmtk_scan_object_synchronizer_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 3); MMTkHeap::heap()->scan_object_synchronizer_roots(cl); }
+static void mmtk_scan_management_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 4); MMTkHeap::heap()->scan_management_roots(cl); }
+static void mmtk_scan_jvmti_export_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 5); MMTkHeap::heap()->scan_jvmti_export_roots(cl); }
+static void mmtk_scan_aot_loader_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 6); MMTkHeap::heap()->scan_aot_loader_roots(cl); }
+static void mmtk_scan_system_dictionary_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 7); MMTkHeap::heap()->scan_system_dictionary_roots(cl); }
+static void mmtk_scan_code_cache_roots(EdgesClosure closure) { assert(false, "");  MMTkRootsClosure cl(closure, 8); MMTkHeap::heap()->scan_code_cache_roots(cl); }
+static void mmtk_scan_string_table_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 9); MMTkHeap::heap()->scan_string_table_roots(cl); }
+static void mmtk_scan_class_loader_data_graph_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 10); MMTkHeap::heap()->scan_class_loader_data_graph_roots(cl); }
+static void mmtk_scan_weak_processor_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 11); MMTkHeap::heap()->scan_weak_processor_roots(cl); }
+static void mmtk_scan_vm_thread_roots(EdgesClosure closure) { MMTkRootsClosure cl(closure, 12); MMTkHeap::heap()->scan_vm_thread_roots(cl); }
 
 static size_t mmtk_number_of_mutators() {
   return Threads::number_of_threads();
@@ -311,6 +327,135 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
   oop old = Universe::swap_reference_pending_list(prev);
   HeapAccess<AS_NO_KEEPALIVE>::oop_store_at(prev, java_lang_ref_Reference::discovered_offset, old);
   assert(Universe::has_reference_pending_list(), "Reference pending list is empty after swap");
+}
+
+
+static void mmtk_request_starting(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  mmtk_request_starting_impl();
+}
+
+static void mmtk_request_finished(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  mmtk_request_finished_impl();
+}
+
+static void mmtk_request_start(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+  mutator->request_id += 1;
+#endif
+}
+
+static void mmtk_request_end(void *jni_env)
+{
+  JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
+  // This upcall is used by the jni function, so the thread is in native state
+  // first need to transition to vm, then transition to a state ready for handshake
+  ThreadInVMfromNative tiv(thread);
+  third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
+
+
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
+  {
+    mmtk_request_thread_local_gc(thread);
+  }
+#endif
+
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS)
+  mutator->copy_bytes = 0;
+  mutator->bytes_allocated = 0;
+#endif
+}
+
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+
+static void mmtk_thread_local_gc_prologue(Thread *thread) {
+  // compiler thread cannot run concurrently with local gc
+  {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock);
+    while(third_party_heap_active_local_gc_count < 0 || third_party_heap_compilation_requested) {
+      third_party_heap_local_gc_active_lock->wait();
+    }
+    assert(third_party_heap_active_local_gc_count >= 0, "local gc should not start");
+    ++third_party_heap_active_local_gc_count;
+  }
+
+
+#if COMPILER2_OR_JVMCI
+
+  thread->ldpt->clear();
+#endif
+  // In a thread-local gc, only the thread's stack gets scanned
+  // so no need to call the following
+  // nmethod::oops_do_marking_prologue(); 
+}
+
+static void mmtk_thread_local_gc_epilogue(Thread *thread) {
+#if COMPILER2_OR_JVMCI
+  // DerivedPointerTable::update_pointers();
+  thread->ldpt->update_pointers();
+#endif
+  {
+    MutexLockerEx locker(third_party_heap_local_gc_active_lock);
+    --third_party_heap_active_local_gc_count;
+    if (!third_party_heap_active_local_gc_count) third_party_heap_local_gc_active_lock->notify_all();
+  }
+
+}
+
+static void mmtk_execute_thread_local_gc(void *tls)
+{
+  JavaThread *thread = (JavaThread *) tls;
+  mmtk_thread_local_gc_prologue(thread);
+  /*
+    *    
+    void HandshakeState::process_self_inner(JavaThread* thread) {
+      assert(Thread::current() == thread, "should call from thread");
+      assert(!thread->is_terminated(), "should not be a terminated thread");
+
+      ThreadInVMForHandshake tivm(thread);
+      if (!_semaphore.trywait()) {
+        _semaphore.wait_with_safepoint_check(thread);
+      }
+      HandshakeOperation* op = OrderAccess::load_acquire(&_operation);
+      if (op != NULL) {
+        HandleMark hm(thread);
+        CautiouslyPreserveExceptionMark pem(thread);
+        // Disarm before execute the operation
+        clear_handshake(thread);
+        op->do_handshake(thread);
+      }
+      _semaphore.signal();
+    }
+  *
+  */
+  // Use part of the hotspot handshake mechanism 
+  // to do the local gc
+  ThreadInVMForHandshake tivm(thread);
+  // Trigger a local gc
+  ::mmtk_do_thread_local_gc(thread);
+  mmtk_thread_local_gc_epilogue(thread);
+}
+
+
+#endif
+
+static size_t compute_allocator_mem_layout_checksum() {
+  return sizeof(ImmixAllocator)
+    ^ sizeof(BumpAllocator)
+    ^ sizeof(LargeObjectAllocator);
+}
+
+static size_t compute_mutator_mem_layout_checksum() {
+  return sizeof(MMTkMutatorContext);
 }
 
 OpenJDK_Upcalls mmtk_upcalls = {
@@ -350,5 +495,14 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_number_of_mutators,
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
-  mmtk_enqueue_references
+  mmtk_enqueue_references,
+  mmtk_request_start,
+  mmtk_request_end,
+  mmtk_request_starting,
+  mmtk_request_finished,
+  compute_allocator_mem_layout_checksum,
+  compute_mutator_mem_layout_checksum,
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  mmtk_execute_thread_local_gc,
+#endif
 };

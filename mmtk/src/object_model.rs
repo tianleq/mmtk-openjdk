@@ -36,6 +36,30 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         to_obj
     }
 
+    #[cfg(feature = "thread_local_gc_copying")]
+    /// Copy an object and return the address of the new object. This is executed by mutator iteself
+    /// and therefore is using mutator's allocator
+    /// Arguments:
+    /// * `from`: The address of the object to be copied.
+    /// * `semantics`: The copy semantic to use.
+    /// * `mutator`: The `Mutator` for the mutator thread.
+    fn thread_local_copy(
+        from: ObjectReference,
+        _semantics: CopySemantics,
+        mutator: &mut crate::Mutator<OpenJDK>,
+    ) -> ObjectReference {
+        use mmtk::MutatorContext;
+
+        let bytes = unsafe { Oop::from(from).size() };
+        let dst = mutator.alloc_copy(bytes, ::std::mem::size_of::<usize>(), 0);
+        // Copy
+        let src = from.to_raw_address();
+        unsafe { std::ptr::copy_nonoverlapping::<u8>(src.to_ptr(), dst.to_mut_ptr(), bytes) }
+        let to_obj = ObjectReference::from_raw_address(dst);
+        mutator.post_copy(to_obj, bytes);
+        to_obj
+    }
+
     fn copy_to(from: ObjectReference, to: ObjectReference, region: Address) -> Address {
         let need_copy = from != to;
         let bytes = unsafe { Oop::from(from).size::<COMPRESSED>() };
@@ -108,5 +132,9 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         // If oop.klass is not a valid pointer, we may segfault here.
         let klass_id = oop.klass::<COMPRESSED>().id as i32;
         (0..6).contains(&klass_id)
+    }
+
+    fn null_slot() -> crate::OpenJDKEdge {
+        Address::ZERO
     }
 }

@@ -21,8 +21,12 @@ typedef enum {
 extern const uintptr_t GLOBAL_SIDE_METADATA_BASE_ADDRESS;
 extern const uintptr_t GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 extern const uintptr_t VO_BIT_ADDRESS;
+extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
+#ifdef MMTK_ENABLE_EXTRA_HEADER
+extern const size_t MMTK_EXTRA_HEADER_BYTES;
+#endif
 
 extern const char* get_mmtk_version();
 
@@ -58,6 +62,12 @@ extern void mmtk_object_reference_write_slow(MMTk_Mutator mutator, void* src, vo
 /// Full array-copy pre-barrier
 extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
+extern void mmtk_object_array_copy_pre(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+
+extern void mmtk_object_array_copy_slow(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+
 /// Full array-copy post-barrier
 extern void mmtk_array_copy_post(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
@@ -88,7 +98,7 @@ extern size_t get_max_non_los_default_alloc_bytes();
 /**
  * Finalization
  */
-extern void add_finalizer(void* obj);
+extern void add_finalizer(void* obj, MMTk_Mutator mutator);
 extern void* get_finalized_object();
 
 /**
@@ -131,11 +141,11 @@ struct MutatorClosure {
 };
 
 struct EdgesClosure {
-    NewBuffer (*func)(void** buf, size_t size, size_t capa, void* data);
+    NewBuffer (*func)(void** buf, size_t size, size_t capa, void* data, int8_t vm_roots);
     void* data;
 
-    NewBuffer invoke(void** buf, size_t size, size_t capa) {
-        return func(buf, size, capa, data);
+    NewBuffer invoke(void** buf, size_t size, size_t capa, int8_t vm_roots) {
+        return func(buf, size, capa, data, vm_roots);
     }
 };
 
@@ -180,6 +190,15 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    void (*mmtk_request_start)(void *jni_env);
+    void (*mmtk_request_end)(void *jni_env);
+    void (*mmtk_request_starting)(void *jni_env);
+    void (*mmtk_request_finished)(void *jni_env);
+    size_t (*compute_allocator_mem_layout_checksum) ();
+    size_t (*compute_mutator_mem_layout_checksum) ();
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+    void (*execute_thread_local_gc) (void *tls);
+#endif
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -218,6 +237,28 @@ extern void mmtk_harness_end_impl();
 extern void mmtk_builder_read_env_var_settings();
 extern void mmtk_builder_set_threads(size_t value);
 extern void mmtk_builder_set_transparent_hugepages(bool value);
+
+extern void mmtk_request_starting_impl();
+extern void mmtk_request_finished_impl();
+
+extern void mmtk_request_global_gc(void *tls);
+
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+extern void mmtk_set_public_bit(void *object);
+extern void mmtk_publish_object(void *object);
+extern void mmtk_publish_object_with_fence(void *object);
+extern bool mmtk_is_object_published(void *object);
+#endif
+
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+extern void mmtk_do_thread_local_gc(void *tls);
+extern void mmtk_request_thread_local_gc(void *tls);
+#endif
+
+#ifdef DEBUG_PUBLISH_OBJECT
+extern void mmtk_inc_leak_count(unsigned callsite);
+#endif
+
 
 #ifdef __cplusplus
 }

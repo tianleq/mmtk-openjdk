@@ -78,10 +78,14 @@ impl<const COMPRESSED: bool, F: RootsWorkFactory<OpenJDKEdge<COMPRESSED>>>
                 edges.push((*r).into())
             }
         }
+        #[cfg(not(feature = "debug_publish_object"))]
         // Create work packet
         if !edges.is_empty() {
             self.factory.create_process_edge_roots_work(edges);
         }
+        #[cfg(feature = "debug_publish_object")]
+        // Create work packet
+        self.factory.create_process_edge_roots_work(0xFF, edges);
         // Use the following code to scan CodeCache directly, instead of scanning the "remembered set".
         // unsafe {
         //     ((*UPCALLS).scan_code_cache_roots)(create_process_edges_work::<E> as _);

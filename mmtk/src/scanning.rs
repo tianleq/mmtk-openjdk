@@ -6,6 +6,8 @@ use mmtk::memory_manager;
 use mmtk::scheduler::WorkBucketStage;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
+#[cfg(feature = "thread_local_gc")]
+use mmtk::vm::ObjectGraphTraversal;
 use mmtk::vm::{EdgeVisitor, RootsWorkFactory, Scanning};
 use mmtk::Mutator;
 use mmtk::MutatorContext;
@@ -19,13 +21,40 @@ extern "C" fn report_edges_and_renew_buffer<E: Edge, F: RootsWorkFactory<E>>(
     length: usize,
     capacity: usize,
     factory_ptr: *mut libc::c_void,
+    _vm_roots_type: u8,
 ) -> NewBuffer {
     if !ptr.is_null() {
         // Note: Currently OpenJDKEdge has the same layout as Address.  If the layout changes, we
         // should fix the Rust-to-C interface.
         let buf = unsafe { Vec::<E>::from_raw_parts(ptr as _, length, capacity) };
         let factory: &mut F = unsafe { &mut *(factory_ptr as *mut F) };
+        #[cfg(not(feature = "debug_publish_object"))]
         factory.create_process_edge_roots_work(buf);
+        #[cfg(feature = "debug_publish_object")]
+        factory.create_process_edge_roots_work(_vm_roots_type, buf);
+    }
+    let (ptr, _, capacity) = {
+        // TODO: Use Vec::into_raw_parts() when the method is available.
+        use std::mem::ManuallyDrop;
+        let new_vec = Vec::with_capacity(WORK_PACKET_CAPACITY);
+        let mut me = ManuallyDrop::new(new_vec);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    };
+    NewBuffer { ptr, capacity }
+}
+
+#[cfg(feature = "thread_local_gc")]
+extern "C" fn traverse_thread_local_object_graph<F: ObjectGraphTraversal<OpenJDKEdge>>(
+    ptr: *mut Address,
+    length: usize,
+    capacity: usize,
+    traverse_func: *mut libc::c_void,
+    _vm_roots_type: u8,
+) -> NewBuffer {
+    if !ptr.is_null() {
+        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let traverse_func: &mut F = unsafe { &mut *(traverse_func as *mut F) };
+        traverse_func.traverse_from_roots(buf);
     }
     let (ptr, _, capacity) = {
         // TODO: Use Vec::into_raw_parts() when the method is available.
@@ -41,6 +70,26 @@ pub(crate) fn to_edges_closure<E: Edge, F: RootsWorkFactory<E>>(factory: &mut F)
     EdgesClosure {
         func: report_edges_and_renew_buffer::<E, F>,
         data: factory as *mut F as *mut libc::c_void,
+    }
+}
+
+#[cfg(feature = "thread_local_gc")]
+pub(crate) fn to_thread_local_graph_traversal_closure<F: ObjectGraphTraversal<OpenJDKEdge>>(
+    graph_traversal_func: &mut F,
+) -> EdgesClosure {
+    EdgesClosure {
+        func: traverse_thread_local_object_graph::<F>,
+        data: graph_traversal_func as *mut F as *mut libc::c_void,
+    }
+}
+
+#[cfg(feature = "thread_local_gc")]
+pub(crate) fn to_thread_local_graph_traversal_closure<F: ObjectGraphTraversal<OpenJDKEdge>>(
+    graph_traversal_func: &mut F,
+) -> EdgesClosure {
+    EdgesClosure {
+        func: traverse_thread_local_object_graph::<F>,
+        data: graph_traversal_func as *mut F as *mut libc::c_void,
     }
 }
 

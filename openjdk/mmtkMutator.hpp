@@ -40,10 +40,14 @@ struct LargeObjectAllocator {
   void* tls;
   void* space;
   void* context;
+  void* local_los_objects;
 };
 
 struct ImmixAllocator {
   void* tls;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  uint32_t mutator_id;
+#endif
   void* cursor;
   void* limit;
   void* immix_space;
@@ -56,6 +60,14 @@ struct ImmixAllocator {
   uint8_t _align[7];
   uint8_t line_opt_tag;
   uintptr_t line_opt;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  uintptr_t local_blocks;
+  uintptr_t local_free_blocks;
+  uintptr_t local_reusable_blocks;
+  uint8_t local_line_mark_state;
+  uint8_t local_unavailable_line_mark_state;
+  uint32_t semantic;
+#endif
 };
 
 struct FLBlock {
@@ -103,6 +115,14 @@ struct MutatorConfig {
   void* space_mapping;
   RustDynPtr prepare_func;
   RustDynPtr release_func;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  RustDynPtr thread_local_prepare_func;
+  RustDynPtr thread_local_release_func;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
+  RustDynPtr thread_local_alloc_copy_func;
+  RustDynPtr thread_local_post_copy_func;
+#endif
+#endif
 };
 
 struct MMTkMutatorContext {
@@ -111,6 +131,19 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+  uint32_t mutator_id;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  uint32_t thread_local_gc_status;
+  void* finalizable_candidates;
+#endif
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+  size_t request_id;
+#endif
+#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
+  size_t allocation_count;
+  size_t bytes_allocated;
+  unsigned copy_bytes;
+#endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 
