@@ -65,15 +65,19 @@ impl OopIterate for InstanceMirrorKlass {
             let start: *const NarrowOop = start.to_ptr::<NarrowOop>();
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
             for narrow_oop in slice {
+                #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(narrow_oop.slot().into());
+                #[cfg(feature = "debug_publish_object")]
+                panic!("compressed pointer is not supported");
             }
         } else {
             let start: *const Oop = start.to_ptr::<Oop>();
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
+            #[cfg(feature = "debug_publish_object")]
             let _source = ObjectReference::from(oop);
             for oop in slice {
                 #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_edge(Address::from_ref(oop as &Oop).into().into());
+                closure.visit_edge(Address::from_ref(oop as &Oop).into());
                 #[cfg(feature = "debug_publish_object")]
                 closure.visit_edge(_source, Address::from_ref(oop as &Oop).into());
             }
@@ -99,14 +103,19 @@ impl OopIterate for ObjArrayKlass {
     ) {
         let array = unsafe { oop.as_array_oop() };
         if COMPRESSED {
-            let _source = ObjectReference::from(oop);
             for narrow_oop in unsafe { array.data::<NarrowOop, COMPRESSED>(BasicType::T_OBJECT) } {
+                #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_edge(narrow_oop.slot().into());
+                #[cfg(feature = "debug_publish_object")]
+                // closure.visit_edge(narrow_oop, narrow_oop.slot().into());
+                panic!("compressed pointer is not supported");
             }
         } else {
+            #[cfg(feature = "debug_publish_object")]
+            let _source = ObjectReference::from(oop);
             for oop in unsafe { array.data::<Oop, COMPRESSED>(BasicType::T_OBJECT) } {
                 #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_edge(Address::from_ref(oop as &Oop).into().into());
+                closure.visit_edge(Address::from_ref(oop as &Oop).into());
                 #[cfg(feature = "debug_publish_object")]
                 closure.visit_edge(_source, Address::from_ref(oop as &Oop).into());
             }
@@ -166,6 +175,7 @@ impl InstanceRefKlass {
         oop: Oop,
         closure: &mut impl EdgeVisitor<E<COMPRESSED>>,
     ) {
+        #[cfg(feature = "debug_publish_object")]
         let _source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address::<COMPRESSED>(oop);
         #[cfg(not(feature = "debug_publish_object"))]
@@ -247,6 +257,9 @@ pub unsafe extern "C" fn scan_object_fn<
 ) {
     let ptr: *mut u8 = CLOSURE.with(|x| *x.get());
     let closure = &mut *(ptr as *mut V);
+    #[cfg(feature = "debug_publish_object")]
+    closure.visit_edge(edge.load(), edge.into());
+    #[cfg(not(feature = "debug_publish_object"))]
     closure.visit_edge(edge.into());
 }
 

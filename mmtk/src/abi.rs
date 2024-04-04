@@ -478,6 +478,9 @@ pub struct OopMapBlock {
 }
 
 pub fn validate_memory_layouts() {
+    if crate::use_compressed_oops() {
+        panic!("compressed pointer is not supported")
+    }
     let vm_checksum = unsafe { ((*UPCALLS).compute_klass_mem_layout_checksum)() };
     let binding_checksum = {
         mem::size_of::<Klass>()
@@ -495,9 +498,11 @@ pub fn validate_memory_layouts() {
 
     let binding_allocator_checksum =
         unsafe { ((*UPCALLS).compute_allocator_mem_layout_checksum)() };
-    let core_checksum = memory_manager::compute_allocator_mem_layout_checksum::<OpenJDK>();
+
+    let core_checksum = memory_manager::compute_allocator_mem_layout_checksum::<OpenJDK<false>>();
     assert_eq!(binding_allocator_checksum, core_checksum);
     let binding_mutator_checksum = unsafe { ((*UPCALLS).compute_mutator_mem_layout_checksum)() };
-    let core_mutator_checksum = memory_manager::compute_mutator_mem_layout_checksum::<OpenJDK>();
+    let core_mutator_checksum =
+        memory_manager::compute_mutator_mem_layout_checksum::<OpenJDK<false>>();
     assert_eq!(binding_mutator_checksum, core_mutator_checksum);
 }

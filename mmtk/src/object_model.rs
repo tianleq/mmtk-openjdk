@@ -46,11 +46,11 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
     fn thread_local_copy(
         from: ObjectReference,
         _semantics: CopySemantics,
-        mutator: &mut crate::Mutator<OpenJDK>,
+        mutator: &mut crate::Mutator<OpenJDK<COMPRESSED>>,
     ) -> ObjectReference {
         use mmtk::MutatorContext;
 
-        let bytes = unsafe { Oop::from(from).size() };
+        let bytes = unsafe { Oop::from(from).size::<COMPRESSED>() };
         let dst = mutator.alloc_copy(bytes, ::std::mem::size_of::<usize>(), 0);
         // Copy
         let src = from.to_raw_address();
@@ -134,7 +134,7 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         (0..6).contains(&klass_id)
     }
 
-    fn null_slot() -> crate::OpenJDKEdge {
-        Address::ZERO
+    fn null_slot() -> crate::OpenJDKEdge<COMPRESSED> {
+        crate::OpenJDKEdge::from(Address::ZERO)
     }
 }

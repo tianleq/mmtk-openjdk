@@ -44,7 +44,7 @@ extern "C" fn report_edges_and_renew_buffer<E: Edge, F: RootsWorkFactory<E>>(
 }
 
 #[cfg(feature = "thread_local_gc")]
-extern "C" fn traverse_thread_local_object_graph<F: ObjectGraphTraversal<OpenJDKEdge>>(
+extern "C" fn traverse_thread_local_object_graph<E: Edge, F: ObjectGraphTraversal<E>>(
     ptr: *mut Address,
     length: usize,
     capacity: usize,
@@ -52,7 +52,7 @@ extern "C" fn traverse_thread_local_object_graph<F: ObjectGraphTraversal<OpenJDK
     _vm_roots_type: u8,
 ) -> NewBuffer {
     if !ptr.is_null() {
-        let buf = unsafe { Vec::<Address>::from_raw_parts(ptr, length, capacity) };
+        let buf = unsafe { Vec::<E>::from_raw_parts(ptr as _, length, capacity) };
         let traverse_func: &mut F = unsafe { &mut *(traverse_func as *mut F) };
         traverse_func.traverse_from_roots(buf);
     }
@@ -74,21 +74,11 @@ pub(crate) fn to_edges_closure<E: Edge, F: RootsWorkFactory<E>>(factory: &mut F)
 }
 
 #[cfg(feature = "thread_local_gc")]
-pub(crate) fn to_thread_local_graph_traversal_closure<F: ObjectGraphTraversal<OpenJDKEdge>>(
+pub(crate) fn to_thread_local_graph_traversal_closure<E: Edge, F: ObjectGraphTraversal<E>>(
     graph_traversal_func: &mut F,
 ) -> EdgesClosure {
     EdgesClosure {
-        func: traverse_thread_local_object_graph::<F>,
-        data: graph_traversal_func as *mut F as *mut libc::c_void,
-    }
-}
-
-#[cfg(feature = "thread_local_gc")]
-pub(crate) fn to_thread_local_graph_traversal_closure<F: ObjectGraphTraversal<OpenJDKEdge>>(
-    graph_traversal_func: &mut F,
-) -> EdgesClosure {
-    EdgesClosure {
-        func: traverse_thread_local_object_graph::<F>,
+        func: traverse_thread_local_object_graph::<E, F>,
         data: graph_traversal_func as *mut F as *mut libc::c_void,
     }
 }

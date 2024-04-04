@@ -8,7 +8,6 @@ use std::sync::Mutex;
 
 pub use edges::use_compressed_oops;
 use edges::{OpenJDKEdge, OpenJDKEdgeRange};
-use edges::{OpenJDKEdge, OpenJDKEdgeRange};
 use libc::{c_char, c_void, uintptr_t};
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::constants::LOG_BYTES_IN_GBYTE;
@@ -152,10 +151,6 @@ pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
 pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
     mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
 
-#[no_mangle]
-pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
-    mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
-
 #[derive(Default)]
 pub struct OpenJDK<const COMPRESSED: bool>;
 
@@ -251,4 +246,4 @@ fn set_compressed_pointer_vm_layout(builder: &mut MMTKBuilder) {
 
 #[cfg(feature = "extra_header")]
 #[no_mangle]
-pub static MMTK_EXTRA_HEADER_BYTES: usize = <OpenJDK as VMBinding>::EXTRA_HEADER_BYTES;
+pub static MMTK_EXTRA_HEADER_BYTES: usize = <OpenJDK<false> as VMBinding>::EXTRA_HEADER_BYTES;

@@ -42,13 +42,14 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
     #[cfg(feature = "thread_local_gc")]
     fn scan_mutator(
         tls: VMMutatorThread,
-        mut object_graph_traversal_func: impl ObjectGraphTraversal<OpenJDKEdge>,
+        mut object_graph_traversal_func: impl ObjectGraphTraversal<OpenJDKEdge<COMPRESSED>>,
     ) {
         unsafe {
             ((*UPCALLS).scan_roots_in_mutator_thread)(
-                crate::scanning::to_thread_local_graph_traversal_closure(
-                    &mut object_graph_traversal_func,
-                ),
+                crate::scanning::to_thread_local_graph_traversal_closure::<
+                    OpenJDKEdge<COMPRESSED>,
+                    _,
+                >(&mut object_graph_traversal_func),
                 tls,
             );
         }
