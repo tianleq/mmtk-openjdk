@@ -349,7 +349,7 @@ static void mmtk_request_start(void *jni_env)
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
   third_party_heap::MutatorContext *mutator = (third_party_heap::MutatorContext *)mmtk_get_mmtk_mutator(thread);
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING) || defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
   mutator->request_id += 1;
 #endif
 }
@@ -369,10 +369,6 @@ static void mmtk_request_end(void *jni_env)
   }
 #endif
 
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS)
-  mutator->copy_bytes = 0;
-  mutator->bytes_allocated = 0;
-#endif
 }
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC

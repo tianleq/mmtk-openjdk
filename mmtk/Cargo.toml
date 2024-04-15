@@ -64,6 +64,7 @@ thread_local_gc_ibm_style = ["mmtk/thread_local_gc_ibm_style", "thread_local_gc"
 thread_local_gc_copying = ["mmtk/thread_local_gc_copying", "thread_local_gc"]
 
 public_object_analysis = ["mmtk/public_object_analysis", "public_bit"]
+debug_thread_local_gc_copying = ["mmtk/debug_thread_local_gc_copying", "thread_local_gc", "thread_local_gc_copying"]
 
 # This compile time constant places the mark bit in the header of the object instead of on the side.
 mark_bit_in_header = []

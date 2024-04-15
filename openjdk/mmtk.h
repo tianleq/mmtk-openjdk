@@ -244,10 +244,19 @@ extern void mmtk_request_finished_impl();
 extern void mmtk_request_global_gc(void *tls);
 
 #ifdef MMTK_ENABLE_PUBLIC_BIT
-extern void mmtk_set_public_bit(void *object);
-extern void mmtk_publish_object(void *object);
-extern void mmtk_publish_object_with_fence(void *object);
+
 extern bool mmtk_is_object_published(void *object);
+
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+  extern void mmtk_set_public_bit(JavaThread *thread, void *object);
+  extern void mmtk_publish_object(JavaThread* thread, void *object);
+  extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
+#else
+  extern void mmtk_set_public_bit(void *object);
+  extern void mmtk_publish_object(void *object);
+  extern void mmtk_publish_object_with_fence(void *object);
+#endif
+
 #endif
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC

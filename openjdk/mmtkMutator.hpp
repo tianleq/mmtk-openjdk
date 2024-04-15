@@ -136,13 +136,11 @@ struct MMTkMutatorContext {
   uint32_t thread_local_gc_status;
   void* finalizable_candidates;
 #endif
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC) && defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING) || defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
   size_t request_id;
 #endif
-#ifdef MMTK_ENABLE_PUBLIC_OBJECT_ANALYSIS
-  size_t allocation_count;
-  size_t bytes_allocated;
-  unsigned copy_bytes;
+#ifdef MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING
+  uintptr_t stats;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

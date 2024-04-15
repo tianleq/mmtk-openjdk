@@ -661,7 +661,7 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
     }
 }
 
-#[cfg(feature = "public_bit")]
+#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     debug_assert!(
@@ -672,7 +672,7 @@ pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     0
 }
 
-#[cfg(feature = "public_bit")]
+#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
     debug_assert!(
@@ -680,6 +680,27 @@ pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
         "compressed pointer is not supported"
     );
     with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object));
+}
+
+#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectReference) -> usize {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object, tls));
+    0
+}
+
+#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(tls: VMMutatorThread, object: ObjectReference) {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object, tls));
 }
 
 #[cfg(feature = "public_bit")]
