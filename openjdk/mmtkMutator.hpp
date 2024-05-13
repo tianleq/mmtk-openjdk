@@ -64,8 +64,8 @@ struct ImmixAllocator {
   uintptr_t local_blocks;
   uintptr_t local_free_blocks;
   uintptr_t local_reusable_blocks;
-  uint8_t local_line_mark_state;
-  uint8_t local_unavailable_line_mark_state;
+  // uint8_t local_line_mark_state;
+  // uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
 #endif
 };
@@ -141,6 +141,9 @@ struct MMTkMutatorContext {
 #endif
 #ifdef MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING
   uintptr_t stats;
+#endif
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  size_t local_allocation_size;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
