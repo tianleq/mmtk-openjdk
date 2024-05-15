@@ -42,9 +42,6 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
-// extern "C" JNIEXPORT void pns2();
-// extern "C" void breakpoint();
-
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
                                                              Monitor::_safepoint_check_sometimes);
