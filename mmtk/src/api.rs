@@ -572,3 +572,34 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
         );
     }
 }
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
+    0
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object));
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object)
+}

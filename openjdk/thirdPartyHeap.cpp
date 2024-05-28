@@ -10,7 +10,7 @@ GCArguments* new_gc_arguments() {
   return NULL;
 }
 
-void register_finalizer(void* obj) {
+void register_finalizer(void* obj, Thread *thread) {
   add_finalizer(obj);
 }
 

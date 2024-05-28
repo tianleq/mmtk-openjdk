@@ -219,6 +219,13 @@ extern void mmtk_builder_read_env_var_settings();
 extern void mmtk_builder_set_threads(size_t value);
 extern void mmtk_builder_set_transparent_hugepages(bool value);
 
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+extern bool mmtk_is_object_published(void *object);
+extern void mmtk_set_public_bit(void *object);
+extern void mmtk_publish_object(void *object);
+extern void mmtk_publish_object_with_fence(void *object);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
