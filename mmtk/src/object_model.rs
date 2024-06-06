@@ -30,6 +30,18 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         let dst = copy_context.alloc_copy(from, bytes, ::std::mem::size_of::<usize>(), 0, copy);
         // Copy
         let src = from.to_raw_address();
+
+        // {
+        //     for i in 0..(bytes >> 3) {
+        //         let p = dst.add(i << 3).to_ptr();
+        //         assert!(
+        //             0 == unsafe { std::ptr::read::<usize>(p) },
+        //             "{:?} overwritten",
+        //             dst
+        //         );
+        //     }
+        // }
+
         unsafe { std::ptr::copy_nonoverlapping::<u8>(src.to_ptr(), dst.to_mut_ptr(), bytes) }
         let to_obj = ObjectReference::from_raw_address(dst);
         copy_context.post_copy(to_obj, bytes, copy);

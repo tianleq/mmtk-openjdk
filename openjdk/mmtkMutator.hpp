@@ -64,8 +64,6 @@ struct ImmixAllocator {
   uintptr_t local_blocks;
   uintptr_t local_free_blocks;
   uintptr_t local_reusable_blocks;
-  // uint8_t local_line_mark_state;
-  // uint8_t local_unavailable_line_mark_state;
   uint32_t semantic;
 #endif
 };
