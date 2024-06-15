@@ -89,16 +89,6 @@ impl<const COMPRESSED: bool> Scanning<OpenJDK<COMPRESSED>> for VMScanning {
         object: ObjectReference,
         edge_visitor: &mut EV,
     ) {
-        // assert!(
-        //     object
-        //         .to_address::<OpenJDK<COMPRESSED>>()
-        //         .class_is_valid::<OpenJDK<COMPRESSED>>(),
-        //     "object: {:?}, klass: {:?}",
-        //     object,
-        //     object
-        //         .to_address::<OpenJDK<COMPRESSED>>()
-        //         .class_pointer::<OpenJDK<COMPRESSED>>()
-        // );
         crate::object_scanning::scan_object::<COMPRESSED>(object, edge_visitor, tls);
     }
 

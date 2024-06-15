@@ -53,9 +53,9 @@ endif
 
 ifeq ($(THREAD_LOCAL_GC), 3)
   ifndef GC_FEATURES
-    GC_FEATURES=--features debug_thread_local_gc_copying
+    GC_FEATURES=--features thread_local_gc_copying_stats
   else
-    GC_FEATURES:=$(strip $(GC_FEATURES))",debug_thread_local_gc_copying"
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying_stats"
   endif
 endif
 
@@ -167,7 +167,6 @@ ifeq ($(THREAD_LOCAL_GC), 3)
   JVM_CFLAGS += -DMMTK_ENABLE_PUBLIC_BIT
   JVM_CFLAGS += -DMMTK_ENABLE_THREAD_LOCAL_GC_COPYING
   JVM_CFLAGS += -DMMTK_ENABLE_THREAD_LOCAL_GC
-  JVM_CFLAGS += -DMMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING
 endif
 
 ifeq ($(DEBUG_PUBLISH_OBJECT), 1)
