@@ -40,7 +40,7 @@ mmtk = { path = "../../mmtk-core" }
 built = { version = "0.7.1", features = ["git2"] }
 
 [features]
-default = ["thread_local_gc_copying_stats"]
+default = []
 mmtk_extreme_assertions = ["mmtk/extreme_assertions"]
 nogc_lock_free = ["mmtk/nogc_lock_free"]
 nogc_no_zeroing = ["mmtk/nogc_no_zeroing"]
