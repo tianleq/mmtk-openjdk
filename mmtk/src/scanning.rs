@@ -44,7 +44,7 @@ extern "C" fn report_slots_and_renew_buffer<S: Slot, F: RootsWorkFactory<S>>(
 }
 
 #[cfg(feature = "thread_local_gc")]
-extern "C" fn traverse_thread_local_object_graph<E: Edge, F: ObjectGraphTraversal<E>>(
+extern "C" fn traverse_thread_local_object_graph<S: Slot, F: ObjectGraphTraversal<S>>(
     ptr: *mut Address,
     length: usize,
     capacity: usize,
@@ -52,7 +52,7 @@ extern "C" fn traverse_thread_local_object_graph<E: Edge, F: ObjectGraphTraversa
     _vm_roots_type: u8,
 ) -> NewBuffer {
     if !ptr.is_null() {
-        let buf = unsafe { Vec::<E>::from_raw_parts(ptr as _, length, capacity) };
+        let buf = unsafe { Vec::<S>::from_raw_parts(ptr as _, length, capacity) };
         let traverse_func: &mut F = unsafe { &mut *(traverse_func as *mut F) };
         traverse_func.traverse_from_roots(buf);
     }
@@ -74,10 +74,10 @@ pub(crate) fn to_slots_closure<S: Slot, F: RootsWorkFactory<S>>(factory: &mut F)
 }
 
 #[cfg(feature = "thread_local_gc")]
-pub(crate) fn to_thread_local_graph_traversal_closure<E: Edge, F: ObjectGraphTraversal<E>>(
+pub(crate) fn to_thread_local_graph_traversal_closure<E: Slot, F: ObjectGraphTraversal<E>>(
     graph_traversal_func: &mut F,
-) -> EdgesClosure {
-    EdgesClosure {
+) -> SlotsClosure {
+    SlotsClosure {
         func: traverse_thread_local_object_graph::<E, F>,
         data: graph_traversal_func as *mut F as *mut libc::c_void,
     }

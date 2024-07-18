@@ -477,7 +477,7 @@ fn log_bytes_in_slot() -> usize {
     if crate::use_compressed_oops() {
         OpenJDKSlot::<true>::LOG_BYTES_IN_SLOT
     } else {
-        OpenJDKEdge::<false>::LOG_BYTES_IN_EDGE
+        OpenJDKSlot::<false>::LOG_BYTES_IN_SLOT
     }
 }
 
@@ -646,12 +646,12 @@ pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
 
 #[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
 #[no_mangle]
-pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object));
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
 }
 
 #[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
@@ -667,22 +667,22 @@ pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectRefere
 
 #[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
 #[no_mangle]
-pub extern "C" fn mmtk_publish_object(tls: VMMutatorThread, object: ObjectReference) {
+pub extern "C" fn mmtk_publish_object(tls: VMMutatorThread, object: NullableObjectReference) {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object, tls));
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into(), tls));
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+pub extern "C" fn mmtk_is_object_published(object: NullableObjectReference) -> bool {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object)
+    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object.into())
 }
 
 #[cfg(feature = "thread_local_gc")]

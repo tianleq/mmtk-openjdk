@@ -69,7 +69,7 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         // Copy
         let src = from.to_raw_address();
         unsafe { std::ptr::copy_nonoverlapping::<u8>(src.to_ptr(), dst.to_mut_ptr(), bytes) }
-        let to_obj = ObjectReference::from_raw_address(dst);
+        let to_obj = unsafe { ObjectReference::from_raw_address_unchecked(dst) };
         mutator.post_copy(to_obj, bytes);
         to_obj
     }
@@ -143,7 +143,7 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         (0..6).contains(&klass_id)
     }
 
-    fn null_slot() -> crate::OpenJDKEdge<COMPRESSED> {
-        crate::OpenJDKEdge::from(Address::ZERO)
+    fn null_slot() -> crate::OpenJDKSlot<COMPRESSED> {
+        crate::OpenJDKSlot::from(Address::ZERO)
     }
 }
