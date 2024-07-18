@@ -28,6 +28,7 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
     ) -> ObjectReference {
         let bytes = unsafe { Oop::from(from).size::<COMPRESSED>() };
         let dst = copy_context.alloc_copy(from, bytes, ::std::mem::size_of::<usize>(), 0, copy);
+        debug_assert!(!dst.is_zero());
         // Copy
         let src = from.to_raw_address();
 
@@ -43,7 +44,8 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         // }
 
         unsafe { std::ptr::copy_nonoverlapping::<u8>(src.to_ptr(), dst.to_mut_ptr(), bytes) }
-        let to_obj = ObjectReference::from_raw_address(dst);
+        // Note on onsafe: `alloc_copy` never returns 0.
+        let to_obj = unsafe { ObjectReference::from_raw_address_unchecked(dst) };
         copy_context.post_copy(to_obj, bytes, copy);
         to_obj
     }
@@ -92,7 +94,8 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
     }
 
     fn get_reference_when_copied_to(_from: ObjectReference, to: Address) -> ObjectReference {
-        ObjectReference::from_raw_address(to)
+        debug_assert!(!to.is_zero());
+        unsafe { ObjectReference::from_raw_address_unchecked(to) }
     }
 
     fn get_current_size(object: ObjectReference) -> usize {
@@ -120,17 +123,11 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         object.to_raw_address()
     }
 
-    fn ref_to_address(object: ObjectReference) -> Address {
-        object.to_raw_address()
-    }
-
     fn ref_to_header(object: ObjectReference) -> Address {
         object.to_raw_address()
     }
 
-    fn address_to_ref(address: Address) -> ObjectReference {
-        ObjectReference::from_raw_address(address)
-    }
+    const IN_OBJECT_ADDRESS_OFFSET: isize = 0;
 
     fn dump_object(object: ObjectReference) {
         unsafe {
