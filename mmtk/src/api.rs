@@ -48,6 +48,10 @@ static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarr
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
 
+#[cfg(feature = "public_bit")]
+static PUBLIC_OBJECT_MARKING_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("PublicObjectMarkingBarrier").unwrap());
+
 #[no_mangle]
 pub extern "C" fn get_mmtk_version() -> *const c_char {
     crate::build_info::MMTK_OPENJDK_FULL_VERSION.as_ptr() as _
@@ -59,6 +63,8 @@ pub extern "C" fn mmtk_active_barrier() -> *const c_char {
         match singleton.get_plan().constraints().barrier {
             BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
             BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+            #[cfg(feature = "public_bit")]
+            BarrierSelector::PublicObjectMarkingBarrier => PUBLIC_OBJECT_MARKING_BARRIER.as_ptr(),
             // In case we have more barriers in mmtk-core.
             #[allow(unreachable_patterns)]
             _ => unimplemented!(),
@@ -448,6 +454,49 @@ fn log_bytes_in_slot() -> usize {
     }
 }
 
+/// Object Array-copy pre-barrier
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_pre(
+    mutator: *mut libc::c_void,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << mmtk::util::constants::LOG_BYTES_IN_ADDRESS;
+    with_mutator!(|mutator| {
+        mutator.barrier().object_array_copy_pre(
+            src_base,
+            dst_base,
+            (src..src + bytes).into(),
+            (dst..dst + bytes).into(),
+        );
+    })
+}
+
+/// Object Array-copy slow-path call
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_slow(
+    mutator: *mut libc::c_void,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << mmtk::util::constants::LOG_BYTES_IN_ADDRESS;
+
+    with_mutator!(|mutator| {
+        mutator.barrier().object_array_copy_slow(
+            src_base,
+            dst_base,
+            (src..src + bytes).into(),
+            (dst..dst + bytes).into(),
+        );
+    })
+}
+
 /// Array-copy pre-barrier
 #[no_mangle]
 pub extern "C" fn mmtk_array_copy_pre(
@@ -543,4 +592,35 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
             Ordering::Relaxed,
         );
     }
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
+    0
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
+}
+
+#[cfg(feature = "public_bit")]
+#[no_mangle]
+pub extern "C" fn mmtk_is_object_published(object: NullableObjectReference) -> bool {
+    debug_assert!(
+        crate::use_compressed_oops() == false,
+        "compressed pointer is not supported"
+    );
+    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object.into())
 }

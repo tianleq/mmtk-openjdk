@@ -21,6 +21,7 @@ typedef enum {
 extern const uintptr_t GLOBAL_SIDE_METADATA_BASE_ADDRESS;
 extern const uintptr_t GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 extern const uintptr_t VO_BIT_ADDRESS;
+extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
 
@@ -55,6 +56,13 @@ extern void mmtk_object_reference_write_post(MMTk_Mutator mutator, void* src, vo
 /// Generic slow-path
 extern void mmtk_object_reference_write_slow(MMTk_Mutator mutator, void* src, void* slot, void* target);
 
+
+extern void mmtk_object_array_copy_pre(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+
+extern void mmtk_object_array_copy_slow(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+                                       
 /// Full array-copy pre-barrier
 extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
@@ -218,6 +226,16 @@ extern void mmtk_harness_end_impl();
 extern void mmtk_builder_read_env_var_settings();
 extern void mmtk_builder_set_threads(size_t value);
 extern void mmtk_builder_set_transparent_hugepages(bool value);
+
+
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+
+extern bool mmtk_is_object_published(void *object);
+extern void mmtk_set_public_bit(void *object);
+extern void mmtk_publish_object(void *object);
+extern void mmtk_publish_object_with_fence(void *object);
+
+#endif
 
 #ifdef __cplusplus
 }

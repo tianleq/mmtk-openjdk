@@ -67,9 +67,16 @@ public:
   /// Generic slow-path. Called by fast-paths.
   static void object_reference_write_slow_call(void* src, void* slot, void* target);
   /// Generic arraycopy post-barrier. Called by fast-paths.
-  static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
+  // static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
+  // Generic arraycopy pre-barrier. Called by fast-paths.
+  static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count, void* src_base, void* dst_base);
+
   /// Generic arraycopy pre-barrier. Called by fast-paths.
   static void object_reference_array_copy_post_call(void* src, void* dst, size_t count);
+  /// Generic slow-paht. Called by fast-path.
+  static void object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base);
+
+
   /// Check if the address is a slow-path function.
   virtual bool is_slow_path_call(address call) const {
     return call == CAST_FROM_FN_PTR(address, object_reference_write_pre_call)
@@ -84,7 +91,10 @@ public:
   /// Full post-barrier
   virtual void object_reference_write_post(oop src, oop* slot, oop target) const {};
   /// Full arraycopy pre-barrier
-  virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const {};
+  // virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const {};
+  /// Full arraycopy pre-barrier
+  virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count, oop src_base, oop dst_base) const {};
+
   /// Full arraycopy post-barrier
   virtual void object_reference_array_copy_post(oop* src, oop* dst, size_t count) const {};
   /// Called at the end of every C2 slowpath allocation.
@@ -216,7 +226,7 @@ public:
                                       size_t length) {
       T* src = arrayOopDesc::obj_offset_to_raw(src_obj, src_offset_in_bytes, src_raw);
       T* dst = arrayOopDesc::obj_offset_to_raw(dst_obj, dst_offset_in_bytes, dst_raw);
-      runtime()->object_reference_array_copy_pre((oop*) src, (oop*) dst, length);
+      runtime()->object_reference_array_copy_pre((oop*) src, (oop*) dst, length, src_obj, dst_obj);
       bool result = Raw::oop_arraycopy(src_obj, src_offset_in_bytes, src_raw,
                                        dst_obj, dst_offset_in_bytes, dst_raw,
                                        length);

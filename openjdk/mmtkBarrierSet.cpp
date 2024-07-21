@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
+#include "barriers/mmtkPublicObjectMarkingBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
 #include "mmtkBarrierSetAssembler_x86.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
@@ -79,6 +80,7 @@ MMTkBarrierBase* get_selected_barrier() {
   const char* barrier = mmtk_active_barrier();
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
+  else if (strcmp(barrier, "PublicObjectMarkingBarrier") == 0) selected_barrier = new MMTkPublicObjectMarkingBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }
@@ -144,10 +146,18 @@ void MMTkBarrierSetRuntime::object_reference_write_slow_call(void* src, void* sl
   ::mmtk_object_reference_write_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
 }
 
-void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
-  ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
+//   ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// }
+
+void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
+  ::mmtk_object_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_post_call(void* src, void* dst, size_t count) {
   ::mmtk_array_copy_post((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+}
+
+void MMTkBarrierSetRuntime::object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
+  ::mmtk_object_array_copy_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
