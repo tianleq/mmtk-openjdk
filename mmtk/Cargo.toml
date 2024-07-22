@@ -51,6 +51,7 @@ nogc_no_zeroing = ["mmtk/nogc_no_zeroing"]
 vo_bit = ["mmtk/vo_bit"]
 
 public_bit = ["mmtk/public_bit"]
+thread_local_gc = ["mmtk/thread_local_gc"]
 
 # Place the mark bit in the header of objects instead of on the side.
 mark_bit_in_header = []
