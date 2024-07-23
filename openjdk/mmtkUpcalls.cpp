@@ -41,6 +41,13 @@
 #include "runtime/vmThread.hpp"
 #include "utilities/debug.hpp"
 
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+Monitor* third_party_heap_local_gc_active_lock = new Monitor(Mutex::nonleaf, "ThirdPartyLocalGCActive_Lock", true,
+                                                             Monitor::_safepoint_check_sometimes);
+int32_t third_party_heap_active_local_gc_count = 0;
+bool third_party_heap_compilation_requested = false;
+#endif
+
 // Note: This counter must be accessed using the Atomic class.
 static volatile size_t mmtk_start_the_world_count = 0;
 

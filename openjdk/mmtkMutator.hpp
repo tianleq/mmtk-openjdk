@@ -40,6 +40,9 @@ struct LargeObjectAllocator {
   void* tls;
   void* space;
   void* context;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  void* local_los_objects;
+#endif
 };
 
 struct ImmixAllocator {
