@@ -138,9 +138,14 @@ pub static VO_BIT_ADDRESS: uintptr_t =
 pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
     std::mem::size_of::<mmtk::util::alloc::FreeListAllocator<OpenJDK<false>>>();
 
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
     mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
+
+#[cfg(not(feature = "public_bit"))]
+#[no_mangle]
+pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t = 0;
 
 #[derive(Default)]
 pub struct OpenJDK<const COMPRESSED: bool>;

@@ -12,6 +12,7 @@
 #include "opto/callnode.hpp"
 #include "opto/idealKit.hpp"
 
+#ifdef MMTK_ENABLE_PUBLIC_BIT
 
 const intptr_t PUBLIC_BIT_BASE_ADDRESS = (intptr_t) GLOBAL_PUBLIC_BIT_ADDRESS;
 
@@ -62,5 +63,7 @@ struct MMTkPublicObjectMarkingBarrier: MMTkBarrierImpl<
   MMTkPublicObjectMarkingBarrierSetC1,
   MMTkPublicObjectMarkingBarrierSetC2
 > {};
+
+#endif
 
 #endif // MMTK_OPENJDK_BARRIERS_MMTK_PUBLIC_OBJECT_MARKING_BARRIER_HPP

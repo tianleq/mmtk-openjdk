@@ -1,7 +1,8 @@
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+
 #include "precompiled.hpp"
 #include "mmtkPublicObjectMarkingBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
-
 
 void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call(void* src, void* slot, void* target) {
   // if target is null, nothing needs to be published
@@ -286,3 +287,6 @@ void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* k
 }
 
 #undef __
+
+
+#endif
