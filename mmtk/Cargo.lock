@@ -456,6 +456,7 @@ dependencies = [
  "portable-atomic",
  "probe",
  "regex",
+ "rustversion",
  "spin",
  "static_assertions",
  "strum",
