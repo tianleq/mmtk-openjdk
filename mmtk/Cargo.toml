@@ -52,6 +52,7 @@ vo_bit = ["mmtk/vo_bit"]
 
 public_bit = ["mmtk/public_bit"]
 thread_local_gc = ["mmtk/thread_local_gc"]
+publish_rate_analysis = ["mmtk/publish_rate_analysis"]
 
 # Place the mark bit in the header of objects instead of on the side.
 mark_bit_in_header = []
