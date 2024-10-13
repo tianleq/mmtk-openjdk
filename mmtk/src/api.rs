@@ -615,23 +615,39 @@ pub extern "C" fn mmtk_request_finished_impl() {
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
+pub extern "C" fn mmtk_set_public_bit(
+    #[cfg(feature = "publish_rate_analysis")] tls: VMMutatorThread,
+    object: ObjectReference,
+) -> usize {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(
+        #[cfg(feature = "publish_rate_analysis")]
+        tls,
+        singleton,
+        object
+    ));
     0
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
+pub extern "C" fn mmtk_publish_object(
+    #[cfg(feature = "publish_rate_analysis")] tls: VMMutatorThread,
+    object: NullableObjectReference,
+) {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(
+        #[cfg(feature = "publish_rate_analysis")]
+        tls,
+        singleton,
+        object.into()
+    ));
 }
 
 #[cfg(feature = "public_bit")]
@@ -642,4 +658,16 @@ pub extern "C" fn mmtk_is_object_published(object: NullableObjectReference) -> b
         "compressed pointer is not supported"
     );
     memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object.into())
+}
+
+#[cfg(feature = "publish_rate_analysis")]
+#[no_mangle]
+pub extern "C" fn mmtk_register_mutator_name(tls: VMMutatorThread) {
+    memory_manager::mmtk_register_mutator_name::<OpenJDK<false>>(tls);
+}
+
+#[cfg(feature = "publish_rate_analysis")]
+#[no_mangle]
+pub extern "C" fn mmtk_mutator_exit(tls: VMMutatorThread) {
+    with_singleton!(|singleton| memory_manager::mmtk_mutator_exit(tls, singleton));
 }

@@ -190,6 +190,8 @@ typedef struct {
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_request_starting)(void *jni_env);
     void (*mmtk_request_finished)(void *jni_env);
+    void (*mmtk_get_oop_klass_name)(void *object, char *buffer, int size);
+    const char* (*mmtk_get_mutator_name)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -235,9 +237,18 @@ extern void mmtk_request_finished_impl();
 #ifdef MMTK_ENABLE_PUBLIC_BIT
 
 extern bool mmtk_is_object_published(void *object);
+
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+extern void mmtk_set_public_bit(JavaThread *thread, void *object);
+extern void mmtk_publish_object(JavaThread* thread, void *object);
+extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
+extern void mmtk_register_mutator_name(JavaThread *thread);
+extern void mmtk_mutator_exit(JavaThread *thread);
+#else
 extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
 extern void mmtk_publish_object_with_fence(void *object);
+#endif
 
 #endif
 

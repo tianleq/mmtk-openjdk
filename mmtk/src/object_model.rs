@@ -106,4 +106,20 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         let klass_id = oop.klass::<COMPRESSED>().id as i32;
         (0..6).contains(&klass_id)
     }
+
+    fn get_object_klass_name(object: ObjectReference) -> String {
+        let new_vec: Vec<libc::c_char> = Vec::with_capacity(512);
+        let mut me = std::mem::ManuallyDrop::new(new_vec);
+        let length = me.len();
+        let capacity = me.capacity();
+        unsafe {
+            ((*UPCALLS).get_oop_klass_name)(object, std::mem::transmute(me.as_mut_ptr()), 512);
+            let klass_name = std::ffi::CStr::from_ptr(me.as_ptr())
+                .to_str()
+                .unwrap()
+                .to_string();
+            Vec::from_raw_parts(me.as_mut_ptr(), length, capacity);
+            klass_name
+        }
+    }
 }

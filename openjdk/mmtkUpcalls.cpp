@@ -232,6 +232,7 @@ static void mmtk_harness_end() {
   assert(Thread::current()->is_Java_thread(), "Only Java thread can leave vm");
 
   JavaThread* current = ((JavaThread*) Thread::current());
+
   ThreadInVMfromNative tiv(current);
   mmtk_harness_end_impl();
 }
@@ -269,6 +270,12 @@ static char* dump_object_string(void* object) {
 
 static void mmtk_schedule_finalizer() {
   MMTkHeap::heap()->schedule_finalizer();
+}
+
+static void mmtk_get_oop_klass_name(void *object, char* buffer, int size)
+{
+  oop o = (oop) object;
+  o->klass()->name()->as_C_string(buffer, size);
 }
 
 static void mmtk_scan_universe_roots(SlotsClosure closure) { MMTkRootsClosure cl(closure); MMTkHeap::heap()->scan_universe_roots(cl); }
@@ -330,6 +337,12 @@ static void mmtk_request_finished(void *jni_env)
   mmtk_request_finished_impl();
 }
 
+static const char* mmtk_get_mutator_name(void *tls)
+{
+  JavaThread *thread = (JavaThread *) tls;
+  return JavaThread::name_for(thread->threadObj());
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -370,4 +383,6 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_enqueue_references,
   mmtk_request_starting,
   mmtk_request_finished,
+  mmtk_get_oop_klass_name,
+  mmtk_get_mutator_name,
 };

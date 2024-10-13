@@ -116,10 +116,17 @@ void MMTkBarrierSet::on_thread_destroy(Thread* thread) {
 
 void MMTkBarrierSet::on_thread_attach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+  ResourceMark rm;
+  if (thread->threadObj()) mmtk_register_mutator_name(thread);
+#endif
 }
 
 void MMTkBarrierSet::on_thread_detach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+  mmtk_mutator_exit(thread);
+#endif
 }
 
 

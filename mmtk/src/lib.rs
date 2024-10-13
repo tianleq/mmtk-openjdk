@@ -120,6 +120,8 @@ pub struct OpenJDK_Upcalls {
     pub enqueue_references: extern "C" fn(objects: *const ObjectReference, len: usize),
     pub request_starting: extern "C" fn(jni_env: *const c_void),
     pub request_finished: extern "C" fn(jni_env: *const c_void),
+    pub get_oop_klass_name: extern "C" fn(object: ObjectReference, buffer: *mut c_void, size: i32),
+    pub get_mutator_name: extern "C" fn(tls: VMMutatorThread) -> *const libc::c_char,
 }
 
 pub static mut UPCALLS: *const OpenJDK_Upcalls = null_mut();
