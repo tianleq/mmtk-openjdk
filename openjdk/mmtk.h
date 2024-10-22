@@ -199,6 +199,7 @@ typedef struct {
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
     void (*execute_thread_local_gc) (void *tls);
 #endif
+    void* (*swap_reference_pending_list)(void* objects);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);

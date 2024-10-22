@@ -1,9 +1,12 @@
+use crate::reference_glue::DISCOVERED_LISTS;
+use crate::OpenJDK;
 use crate::OpenJDKSlot;
 
 use super::abi::*;
 use super::UPCALLS;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
+use mmtk::vm::slot::Slot;
 use mmtk::vm::SlotVisitor;
 use std::cell::UnsafeCell;
 use std::{mem, slice};
@@ -140,22 +143,23 @@ impl OopIterate for InstanceRefKlass {
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
         use crate::abi::*;
-        use crate::api::{add_phantom_candidate, add_soft_candidate, add_weak_candidate};
         self.instance_klass.oop_iterate::<COMPRESSED>(oop, closure);
 
-        if Self::should_scan_weak_refs::<COMPRESSED>() {
-            let reference = ObjectReference::from(oop);
+        let discovery_disabled = !closure.should_discover_references();
+
+        if Self::should_discover_refs::<COMPRESSED>(
+            self.instance_klass.reference_type,
+            discovery_disabled,
+        ) {
+            // let reference = ObjectReference::from(oop);
             match self.instance_klass.reference_type {
                 ReferenceType::None => {
                     panic!("oop_iterate on InstanceRefKlass with reference_type as None")
                 }
-                ReferenceType::Weak => add_weak_candidate(reference),
-                ReferenceType::Soft => add_soft_candidate(reference),
-                ReferenceType::Phantom => add_phantom_candidate(reference),
-                // Process these two types normally (as if they are strong refs)
-                // We will handle final reference later
-                ReferenceType::Final | ReferenceType::Other => {
-                    Self::process_ref_as_strong(oop, closure)
+                rt => {
+                    if !Self::discover_reference::<COMPRESSED>(oop, rt) {
+                        Self::process_ref_as_strong(oop, closure)
+                    }
                 }
             }
         } else {
@@ -165,11 +169,37 @@ impl OopIterate for InstanceRefKlass {
 }
 
 impl InstanceRefKlass {
-    fn should_scan_weak_refs<const COMPRESSED: bool>() -> bool {
-        !*crate::singleton::<COMPRESSED>()
+    // fn should_scan_weak_refs<const COMPRESSED: bool>() -> bool {
+    //     !*crate::singleton::<COMPRESSED>()
+    //         .get_options()
+    //         .no_reference_types
+    // }
+
+    fn should_discover_refs<const COMPRESSED: bool>(
+        mut rt: ReferenceType,
+        disable_discovery: bool,
+    ) -> bool {
+        if rt == ReferenceType::Other {
+            rt = ReferenceType::Weak;
+        }
+        if disable_discovery {
+            return false;
+        }
+        if *crate::singleton::<COMPRESSED>().get_options().no_finalizer
+            && rt == ReferenceType::Final
+        {
+            return false;
+        }
+        if *crate::singleton::<COMPRESSED>()
             .get_options()
             .no_reference_types
+            && rt != ReferenceType::Final
+        {
+            return false;
+        }
+        true
     }
+
     fn process_ref_as_strong<const COMPRESSED: bool>(
         oop: Oop,
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
@@ -187,6 +217,38 @@ impl InstanceRefKlass {
         closure.visit_slot(discovered_addr.into());
         #[cfg(feature = "debug_publish_object")]
         closure.visit_slot(_source, discovered_addr.into());
+    }
+
+    fn discover_reference<const COMPRESSED: bool>(oop: Oop, rt: ReferenceType) -> bool {
+        // Do not discover new refs during reference processing.
+        if !DISCOVERED_LISTS.allow_discover() {
+            return false;
+        }
+        // Do not discover if the referent is live.
+        let addr = InstanceRefKlass::referent_address::<COMPRESSED>(oop);
+        let Some(referent) = addr.load() else {
+            return false;
+        };
+        // Skip live or null referents
+        if referent.is_reachable::<OpenJDK<COMPRESSED>>() {
+            return false;
+        }
+        // Skip young referents
+        let reference: ObjectReference = oop.into();
+        if !crate::singleton::<COMPRESSED>()
+            .get_plan()
+            .should_process_reference(reference, referent)
+        {
+            return false;
+        }
+        if rt == ReferenceType::Final && DISCOVERED_LISTS.is_discovered::<COMPRESSED>(reference) {
+            return false;
+        }
+        // Add to reference list
+        DISCOVERED_LISTS
+            .get(rt)
+            .add::<COMPRESSED>(reference, referent);
+        true
     }
 }
 

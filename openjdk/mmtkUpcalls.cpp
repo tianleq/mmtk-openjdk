@@ -450,6 +450,18 @@ static size_t compute_mutator_mem_layout_checksum() {
   return sizeof(MMTkMutatorContext);
 }
 
+static int referent_offset() {
+  return java_lang_ref_Reference::referent_offset;
+}
+
+static int discovered_offset() {
+  return java_lang_ref_Reference::discovered_offset;
+}
+
+static void* mmtk_swap_reference_pending_list(void* object) {
+  return Universe::swap_reference_pending_list((oop) object);
+}
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -497,4 +509,5 @@ OpenJDK_Upcalls mmtk_upcalls = {
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   mmtk_execute_thread_local_gc,
 #endif
+  mmtk_swap_reference_pending_list,
 };

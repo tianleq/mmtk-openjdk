@@ -1,6 +1,6 @@
 use std::{
     ops::Range,
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
 };
 
 use super::abi::LOG_BYTES_IN_INT;
@@ -126,7 +126,10 @@ impl<const COMPRESSED: bool> OpenJDKSlot<COMPRESSED> {
     }
 
     /// encode an object pointer to its u32 compressed form
-    fn compress(o: ObjectReference) -> u32 {
+    fn compress(o: Option<ObjectReference>) -> u32 {
+        let Some(o) = o else {
+            return 0;
+        };
         ((o.to_raw_address() - BASE.load(Ordering::Relaxed)) >> SHIFT.load(Ordering::Relaxed))
             as u32
     }
@@ -185,20 +188,87 @@ impl<const COMPRESSED: bool> Slot for OpenJDKSlot<COMPRESSED> {
         }
     }
 
-    fn store(&self, object: ObjectReference) {
+    fn store(&self, object: Option<ObjectReference>) {
         if cfg!(any(target_arch = "x86", target_arch = "x86_64")) {
             if COMPRESSED {
                 if self.is_compressed() {
                     self.x86_write_unaligned::<u32, true>(Self::compress(object))
                 } else {
-                    self.x86_write_unaligned::<ObjectReference, true>(object)
+                    self.x86_write_unaligned::<Option<ObjectReference>, true>(object)
                 }
             } else {
-                self.x86_write_unaligned::<ObjectReference, false>(object)
+                self.x86_write_unaligned::<Option<ObjectReference>, false>(object)
             }
         } else {
             debug_assert!(!COMPRESSED);
             unsafe { self.addr.store(object) }
+        }
+    }
+
+    fn to_address(&self) -> Address {
+        self.untagged_address()
+    }
+
+    fn raw_address(&self) -> Address {
+        self.addr
+    }
+
+    fn from_address(a: Address) -> Self {
+        Self { addr: a }
+    }
+
+    fn compare_exchange(
+        &self,
+        old_object: Option<ObjectReference>,
+        new_object: Option<ObjectReference>,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<Option<ObjectReference>, Option<ObjectReference>> {
+        if COMPRESSED {
+            if self.is_compressed() {
+                let old_value = Self::compress(old_object);
+                let new_value = Self::compress(new_object);
+                let slot = self.untagged_address();
+                unsafe {
+                    match slot.compare_exchange::<AtomicU32>(old_value, new_value, success, failure)
+                    {
+                        Ok(v) => Ok(Self::decompress(v)),
+                        Err(v) => Err(Self::decompress(v)),
+                    }
+                }
+            } else {
+                let slot = self.untagged_address();
+                let old_value = old_object
+                    .map(|o| o.to_raw_address().as_usize())
+                    .unwrap_or(0);
+                let new_value = new_object
+                    .map(|o| o.to_raw_address().as_usize())
+                    .unwrap_or(0);
+                unsafe {
+                    match slot
+                        .compare_exchange::<AtomicUsize>(old_value, new_value, success, failure)
+                    {
+                        Ok(v) => Ok(ObjectReference::from_raw_address(Address::from_usize(v))),
+                        Err(v) => Err(ObjectReference::from_raw_address(Address::from_usize(v))),
+                    }
+                }
+            }
+        } else {
+            let old_value = old_object
+                .map(|o| o.to_raw_address().as_usize())
+                .unwrap_or(0);
+            let new_value = new_object
+                .map(|o| o.to_raw_address().as_usize())
+                .unwrap_or(0);
+            unsafe {
+                match self
+                    .addr
+                    .compare_exchange::<AtomicUsize>(old_value, new_value, success, failure)
+                {
+                    Ok(v) => Ok(ObjectReference::from_raw_address(Address::from_usize(v))),
+                    Err(v) => Err(ObjectReference::from_raw_address(Address::from_usize(v))),
+                }
+            }
         }
     }
 }
