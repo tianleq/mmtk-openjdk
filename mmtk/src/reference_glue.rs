@@ -86,7 +86,7 @@ impl DiscoveredList {
         reference: ObjectReference,
         referent: ObjectReference,
     ) {
-        // Keep reference and referent alive during SATB
+        // Keep reference and referent alive during SATB (or a no-op if it is a stop-the-world plan)
         crate::singleton::<COMPRESSED>()
             .get_plan()
             .discover_reference(reference, referent);
@@ -281,7 +281,8 @@ impl<E: ProcessEdgesWork, const COMPRESSED: bool> GCWork<E::VM>
                 self.rt,
                 self.list_index
             );
-            let reference = trace.trace_object(reference);
+            // reference should already been the forwarded object as only new/forwarded object is scanned
+            // let reference = trace.trace_object(reference);
             let referent = get_referent::<COMPRESSED>(reference);
             if referent.is_none() {
                 // Remove from the discovered list

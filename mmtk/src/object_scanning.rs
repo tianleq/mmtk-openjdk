@@ -143,7 +143,7 @@ impl OopIterate for InstanceRefKlass {
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
         use crate::abi::*;
-        self.instance_klass.oop_iterate::<COMPRESSED>(oop, closure);
+        self.instance_klass.oop_iterate::<COMPRESSED>(oop, closure); // This will only scan the reference queue object
 
         let discovery_disabled = !closure.should_discover_references();
 
