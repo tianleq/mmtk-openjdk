@@ -1,7 +1,9 @@
+use crate::reference_glue::DISCOVERED_LISTS;
 #[cfg(feature = "thread_local_gc")]
 use crate::OpenJDKSlot;
 use crate::UPCALLS;
 use crate::{MutatorClosure, OpenJDK};
+use mmtk::scheduler::{GCWorker, ProcessEdgesWork};
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::opaque_pointer::*;
 #[cfg(feature = "thread_local_gc")]
@@ -75,5 +77,23 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
         unsafe {
             ((*UPCALLS).schedule_finalizer)();
         }
+    }
+
+    fn process_weak_refs<E: ProcessEdgesWork<VM = OpenJDK<COMPRESSED>>>(
+        worker: &mut GCWorker<OpenJDK<COMPRESSED>>,
+    ) {
+        DISCOVERED_LISTS.process_soft_weak_final_refs::<E, COMPRESSED>(worker)
+    }
+
+    fn process_final_refs<E: ProcessEdgesWork<VM = OpenJDK<COMPRESSED>>>(
+        worker: &mut GCWorker<OpenJDK<COMPRESSED>>,
+    ) {
+        DISCOVERED_LISTS.resurrect_final_refs::<E, COMPRESSED>(worker)
+    }
+
+    fn process_phantom_refs<E: ProcessEdgesWork<VM = OpenJDK<COMPRESSED>>>(
+        worker: &mut GCWorker<OpenJDK<COMPRESSED>>,
+    ) {
+        DISCOVERED_LISTS.process_phantom_refs::<E, COMPRESSED>(worker)
     }
 }
