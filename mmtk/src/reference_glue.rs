@@ -189,12 +189,14 @@ impl DiscoveredLists {
         let mut packets = vec![];
         for i in 0..lists.len() {
             let head = unsafe { *lists[i].head.get() };
-            if clear {
-                unsafe { *lists[i].head.get() = ObjectReference::NULL };
-            }
             if head.is_none() {
                 continue;
             }
+
+            if clear {
+                unsafe { *lists[i].head.get() = ObjectReference::NULL };
+            }
+
             let w = ProcessDiscoveredList::<_, COMPRESSED> {
                 list_index: i,
                 head: head.unwrap(),

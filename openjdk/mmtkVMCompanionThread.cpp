@@ -167,10 +167,10 @@ void MMTkVMCompanionThread::do_mmtk_stw_operation() {
     _lock->notify_all();
   }
 
-  {
-    MutexLockerEx x(Heap_lock, Mutex::_no_safepoint_check_flag);
-    if (Universe::has_reference_pending_list()) {
-      Heap_lock->notify_all();
-    }
-  }
+  // {
+  //   MutexLockerEx x(Heap_lock, Mutex::_no_safepoint_check_flag);
+  //   if (Universe::has_reference_pending_list()) {
+  //     Heap_lock->notify_all();
+  //   }
+  // }
 }
