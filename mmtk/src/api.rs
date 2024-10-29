@@ -1,4 +1,4 @@
-use crate::edges::OpenJDKEdge;
+use crate::slots::OpenJDKSlot;
 use crate::OpenJDK;
 use crate::OpenJDK_Upcalls;
 use crate::BUILDER;
@@ -6,9 +6,9 @@ use crate::UPCALLS;
 use libc::c_char;
 use mmtk::memory_manager;
 use mmtk::plan::BarrierSelector;
-use mmtk::scheduler::GCController;
 use mmtk::scheduler::GCWorker;
 use mmtk::util::alloc::AllocatorSelector;
+use mmtk::util::api_util::NullableObjectReference;
 use mmtk::util::opaque_pointer::*;
 use mmtk::util::{Address, ObjectReference};
 use mmtk::AllocationSemantics;
@@ -48,6 +48,10 @@ static NO_BARRIER: sync::Lazy<CString> = sync::Lazy::new(|| CString::new("NoBarr
 static OBJECT_BARRIER: sync::Lazy<CString> =
     sync::Lazy::new(|| CString::new("ObjectBarrier").unwrap());
 
+#[cfg(feature = "public_bit")]
+static PUBLIC_OBJECT_MARKING_BARRIER: sync::Lazy<CString> =
+    sync::Lazy::new(|| CString::new("PublicObjectMarkingBarrier").unwrap());
+
 #[no_mangle]
 pub extern "C" fn get_mmtk_version() -> *const c_char {
     crate::build_info::MMTK_OPENJDK_FULL_VERSION.as_ptr() as _
@@ -59,6 +63,8 @@ pub extern "C" fn mmtk_active_barrier() -> *const c_char {
         match singleton.get_plan().constraints().barrier {
             BarrierSelector::NoBarrier => NO_BARRIER.as_ptr(),
             BarrierSelector::ObjectBarrier => OBJECT_BARRIER.as_ptr(),
+            #[cfg(feature = "public_bit")]
+            BarrierSelector::PublicObjectMarkingBarrier => PUBLIC_OBJECT_MARKING_BARRIER.as_ptr(),
             // In case we have more barriers in mmtk-core.
             #[allow(unreachable_patterns)]
             _ => unimplemented!(),
@@ -199,29 +205,10 @@ pub extern "C" fn post_alloc(
 
 #[no_mangle]
 pub extern "C" fn will_never_move(object: ObjectReference) -> bool {
-    !object.is_movable()
-}
-
-#[no_mangle]
-// We trust the gc_collector pointer is valid.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub extern "C" fn start_control_collector(tls: VMWorkerThread, gc_controller: *mut libc::c_void) {
     if crate::use_compressed_oops() {
-        let mut gc_controller =
-            unsafe { Box::from_raw(gc_controller as *mut GCController<OpenJDK<true>>) };
-        memory_manager::start_control_collector(
-            crate::singleton::<true>(),
-            tls,
-            &mut gc_controller,
-        );
+        !object.is_movable::<OpenJDK<true>>()
     } else {
-        let mut gc_controller =
-            unsafe { Box::from_raw(gc_controller as *mut GCController<OpenJDK<false>>) };
-        memory_manager::start_control_collector(
-            crate::singleton::<false>(),
-            tls,
-            &mut gc_controller,
-        );
+        !object.is_movable::<OpenJDK<false>>()
     }
 }
 
@@ -230,15 +217,11 @@ pub extern "C" fn start_control_collector(tls: VMWorkerThread, gc_controller: *m
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn start_worker(tls: VMWorkerThread, worker: *mut libc::c_void) {
     if crate::use_compressed_oops() {
-        let mut worker = unsafe { Box::from_raw(worker as *mut GCWorker<OpenJDK<true>>) };
-        memory_manager::start_worker::<OpenJDK<true>>(crate::singleton::<true>(), tls, &mut worker)
+        let worker = unsafe { Box::from_raw(worker as *mut GCWorker<OpenJDK<true>>) };
+        memory_manager::start_worker::<OpenJDK<true>>(crate::singleton::<true>(), tls, worker)
     } else {
-        let mut worker = unsafe { Box::from_raw(worker as *mut GCWorker<OpenJDK<false>>) };
-        memory_manager::start_worker::<OpenJDK<false>>(
-            crate::singleton::<false>(),
-            tls,
-            &mut worker,
-        )
+        let worker = unsafe { Box::from_raw(worker as *mut GCWorker<OpenJDK<false>>) };
+        memory_manager::start_worker::<OpenJDK<false>>(crate::singleton::<false>(), tls, worker)
     }
 }
 
@@ -277,7 +260,7 @@ pub extern "C" fn handle_user_collection_request(tls: VMMutatorThread) {
 
 #[no_mangle]
 pub extern "C" fn mmtk_enable_compressed_oops() {
-    crate::edges::enable_compressed_oops()
+    crate::slots::enable_compressed_oops()
 }
 
 #[no_mangle]
@@ -389,13 +372,13 @@ pub extern "C" fn process_bulk(options: *const c_char) -> bool {
 #[no_mangle]
 pub extern "C" fn mmtk_narrow_oop_base() -> Address {
     debug_assert!(crate::use_compressed_oops());
-    crate::edges::BASE.load(Ordering::Relaxed)
+    crate::slots::BASE.load(Ordering::Relaxed)
 }
 
 #[no_mangle]
 pub extern "C" fn mmtk_narrow_oop_shift() -> usize {
     debug_assert!(crate::use_compressed_oops());
-    crate::edges::SHIFT.load(Ordering::Relaxed)
+    crate::slots::SHIFT.load(Ordering::Relaxed)
 }
 
 #[no_mangle]
@@ -424,12 +407,12 @@ pub extern "C" fn mmtk_object_reference_write_pre(
     mutator: *mut libc::c_void,
     src: ObjectReference,
     slot: Address,
-    target: ObjectReference,
+    target: NullableObjectReference,
 ) {
     with_mutator!(|mutator| {
         mutator
             .barrier()
-            .object_reference_write_pre(src, slot.into(), target);
+            .object_reference_write_pre(src, slot.into(), target.into());
     })
 }
 
@@ -439,12 +422,12 @@ pub extern "C" fn mmtk_object_reference_write_post(
     mutator: *mut libc::c_void,
     src: ObjectReference,
     slot: Address,
-    target: ObjectReference,
+    target: NullableObjectReference,
 ) {
     with_mutator!(|mutator| {
         mutator
             .barrier()
-            .object_reference_write_post(src, slot.into(), target);
+            .object_reference_write_post(src, slot.into(), target.into());
     })
 }
 
@@ -454,21 +437,64 @@ pub extern "C" fn mmtk_object_reference_write_slow(
     mutator: *mut libc::c_void,
     src: ObjectReference,
     slot: Address,
-    target: ObjectReference,
+    target: NullableObjectReference,
 ) {
     with_mutator!(|mutator| {
         mutator
             .barrier()
-            .object_reference_write_slow(src, slot.into(), target);
+            .object_reference_write_slow(src, slot.into(), target.into());
     })
 }
 
-fn log_bytes_in_edge() -> usize {
+fn log_bytes_in_slot() -> usize {
     if crate::use_compressed_oops() {
-        OpenJDKEdge::<true>::LOG_BYTES_IN_EDGE
+        OpenJDKSlot::<true>::LOG_BYTES_IN_SLOT
     } else {
-        OpenJDKEdge::<false>::LOG_BYTES_IN_EDGE
+        OpenJDKSlot::<false>::LOG_BYTES_IN_SLOT
     }
+}
+
+/// Object Array-copy pre-barrier
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_pre(
+    mutator: *mut libc::c_void,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << mmtk::util::constants::LOG_BYTES_IN_ADDRESS;
+    with_mutator!(|mutator| {
+        mutator.barrier().object_array_copy_pre(
+            src_base,
+            dst_base,
+            (src..src + bytes).into(),
+            (dst..dst + bytes).into(),
+        );
+    })
+}
+
+/// Object Array-copy slow-path call
+#[no_mangle]
+pub extern "C" fn mmtk_object_array_copy_slow(
+    mutator: *mut libc::c_void,
+    src_base: ObjectReference,
+    dst_base: ObjectReference,
+    src: Address,
+    dst: Address,
+    count: usize,
+) {
+    let bytes = count << mmtk::util::constants::LOG_BYTES_IN_ADDRESS;
+
+    with_mutator!(|mutator| {
+        mutator.barrier().object_array_copy_slow(
+            src_base,
+            dst_base,
+            (src..src + bytes).into(),
+            (dst..dst + bytes).into(),
+        );
+    })
 }
 
 /// Array-copy pre-barrier
@@ -479,7 +505,7 @@ pub extern "C" fn mmtk_array_copy_pre(
     dst: Address,
     count: usize,
 ) {
-    let bytes = count << log_bytes_in_edge();
+    let bytes = count << log_bytes_in_slot();
     with_mutator!(|mutator| {
         mutator
             .barrier()
@@ -496,7 +522,7 @@ pub extern "C" fn mmtk_array_copy_post(
     count: usize,
 ) {
     with_mutator!(|mutator| {
-        let bytes = count << log_bytes_in_edge();
+        let bytes = count << log_bytes_in_slot();
         mutator
             .barrier()
             .memory_region_copy_post((src..src + bytes).into(), (dst..dst + bytes).into());
@@ -516,18 +542,13 @@ pub extern "C" fn add_finalizer(object: ObjectReference) {
 }
 
 #[no_mangle]
-pub extern "C" fn get_finalized_object() -> ObjectReference {
-    with_singleton!(|singleton| {
-        match memory_manager::get_finalized_object(singleton) {
-            Some(obj) => obj,
-            None => ObjectReference::NULL,
-        }
-    })
+pub extern "C" fn get_finalized_object() -> NullableObjectReference {
+    with_singleton!(|singleton| memory_manager::get_finalized_object(singleton).into())
 }
 
 thread_local! {
     /// Cache all the pointers reported by the current thread.
-    static NMETHOD_SLOTS: RefCell<Vec<Address>> = RefCell::new(vec![]);
+    static NMETHOD_SLOTS: RefCell<Vec<Address>> = const { RefCell::new(vec![]) };
 }
 
 /// Report a list of pointers in nmethod to mmtk.
@@ -572,34 +593,81 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
         );
     }
 }
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_starting)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_finished)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting_impl() {
+    with_singleton!(|singleton| memory_manager::request_starting(singleton));
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished_impl() {
+    with_singleton!(|singleton| memory_manager::request_finished(singleton));
+}
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
+pub extern "C" fn mmtk_set_public_bit(
+    #[cfg(feature = "publish_rate_analysis")] tls: VMMutatorThread,
+    object: ObjectReference,
+) -> usize {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(
+        #[cfg(feature = "publish_rate_analysis")]
+        tls,
+        singleton,
+        object
+    ));
     0
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_publish_object(object: ObjectReference) {
+pub extern "C" fn mmtk_publish_object(
+    #[cfg(feature = "publish_rate_analysis")] tls: VMMutatorThread,
+    object: NullableObjectReference,
+) {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object));
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(
+        #[cfg(feature = "publish_rate_analysis")]
+        tls,
+        singleton,
+        object.into()
+    ));
 }
 
 #[cfg(feature = "public_bit")]
 #[no_mangle]
-pub extern "C" fn mmtk_is_object_published(object: ObjectReference) -> bool {
+pub extern "C" fn mmtk_is_object_published(object: NullableObjectReference) -> bool {
     debug_assert!(
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
-    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object)
+    memory_manager::mmtk_is_object_published::<OpenJDK<false>>(object.into())
+}
+
+#[cfg(feature = "publish_rate_analysis")]
+#[no_mangle]
+pub extern "C" fn mmtk_register_mutator_name(tls: VMMutatorThread) {
+    memory_manager::mmtk_register_mutator_name::<OpenJDK<false>>(tls);
+}
+
+#[cfg(feature = "publish_rate_analysis")]
+#[no_mangle]
+pub extern "C" fn mmtk_mutator_exit(tls: VMMutatorThread) {
+    with_singleton!(|singleton| memory_manager::mmtk_mutator_exit(tls, singleton));
 }

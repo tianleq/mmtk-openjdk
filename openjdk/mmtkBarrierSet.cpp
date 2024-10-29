@@ -25,6 +25,9 @@
 #include "precompiled.hpp"
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+#include "barriers/mmtkPublicObjectMarkingBarrier.hpp"
+#endif
 #include "mmtkBarrierSet.hpp"
 #include "mmtkBarrierSetAssembler_x86.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
@@ -79,6 +82,9 @@ MMTkBarrierBase* get_selected_barrier() {
   const char* barrier = mmtk_active_barrier();
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
+#ifdef MMTK_ENABLE_PUBLIC_BIT
+  else if (strcmp(barrier, "PublicObjectMarkingBarrier") == 0) selected_barrier = new MMTkPublicObjectMarkingBarrier();
+#endif
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }
@@ -110,10 +116,17 @@ void MMTkBarrierSet::on_thread_destroy(Thread* thread) {
 
 void MMTkBarrierSet::on_thread_attach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+  ResourceMark rm;
+  if (thread->threadObj()) mmtk_register_mutator_name(thread);
+#endif
 }
 
 void MMTkBarrierSet::on_thread_detach(JavaThread* thread) {
   thread->third_party_heap_mutator.flush();
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+  mmtk_mutator_exit(thread);
+#endif
 }
 
 
@@ -144,10 +157,18 @@ void MMTkBarrierSetRuntime::object_reference_write_slow_call(void* src, void* sl
   ::mmtk_object_reference_write_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
 }
 
-void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
-  ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count) {
+//   ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+// }
+
+void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
+  ::mmtk_object_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_post_call(void* src, void* dst, size_t count) {
   ::mmtk_array_copy_post((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+}
+
+void MMTkBarrierSetRuntime::object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
+  ::mmtk_object_array_copy_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }

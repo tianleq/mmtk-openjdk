@@ -40,6 +40,9 @@ struct LargeObjectAllocator {
   void* tls;
   void* space;
   void* context;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC
+  void* local_los_objects;
+#endif
 };
 
 struct ImmixAllocator {
@@ -111,6 +114,7 @@ struct MMTkMutatorContext {
   void* mutator_tls;
   RustDynPtr plan;
   MutatorConfig config;
+  unsigned mutator_id;
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

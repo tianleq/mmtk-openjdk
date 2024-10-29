@@ -56,4 +56,16 @@ impl<const COMPRESSED: bool> ActivePlan<OpenJDK<COMPRESSED>> for VMActivePlan {
     fn number_of_mutators() -> usize {
         unsafe { ((*UPCALLS).number_of_mutators)() }
     }
+
+    fn get_mutator_name(tls: VMMutatorThread) -> String {
+        unsafe {
+            let name = std::ffi::CStr::from_ptr(((*UPCALLS).get_mutator_name)(tls))
+                .to_str()
+                .unwrap()
+                .to_string()
+                .to_owned();
+
+            name
+        }
+    }
 }

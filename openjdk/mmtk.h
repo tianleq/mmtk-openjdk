@@ -21,6 +21,7 @@ typedef enum {
 extern const uintptr_t GLOBAL_SIDE_METADATA_BASE_ADDRESS;
 extern const uintptr_t GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 extern const uintptr_t VO_BIT_ADDRESS;
+extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
 
@@ -55,6 +56,13 @@ extern void mmtk_object_reference_write_post(MMTk_Mutator mutator, void* src, vo
 /// Generic slow-path
 extern void mmtk_object_reference_write_slow(MMTk_Mutator mutator, void* src, void* slot, void* target);
 
+
+extern void mmtk_object_array_copy_pre(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+
+extern void mmtk_object_array_copy_slow(MMTk_Mutator mutator, void* src_base, void* dst_base, 
+                                       void* src, void* dst, size_t count);
+                                       
 /// Full array-copy pre-barrier
 extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size_t count);
 
@@ -130,7 +138,7 @@ struct MutatorClosure {
     }
 };
 
-struct EdgesClosure {
+struct SlotsClosure {
     NewBuffer (*func)(void** buf, size_t size, size_t capa, void* data);
     void* data;
 
@@ -162,24 +170,28 @@ typedef struct {
     int (*referent_offset) ();
     int (*discovered_offset) ();
     char* (*dump_object_string) (void* object);
-    void (*scan_roots_in_all_mutator_threads)(EdgesClosure closure);
-    void (*scan_roots_in_mutator_thread)(EdgesClosure closure, void* tls);
-    void (*scan_universe_roots) (EdgesClosure closure);
-    void (*scan_jni_handle_roots) (EdgesClosure closure);
-    void (*scan_object_synchronizer_roots) (EdgesClosure closure);
-    void (*scan_management_roots) (EdgesClosure closure);
-    void (*scan_jvmti_export_roots) (EdgesClosure closure);
-    void (*scan_aot_loader_roots) (EdgesClosure closure);
-    void (*scan_system_dictionary_roots) (EdgesClosure closure);
-    void (*scan_code_cache_roots) (EdgesClosure closure);
-    void (*scan_string_table_roots) (EdgesClosure closure);
-    void (*scan_class_loader_data_graph_roots) (EdgesClosure closure);
-    void (*scan_weak_processor_roots) (EdgesClosure closure);
-    void (*scan_vm_thread_roots) (EdgesClosure closure);
+    void (*scan_roots_in_all_mutator_threads)(SlotsClosure closure);
+    void (*scan_roots_in_mutator_thread)(SlotsClosure closure, void* tls);
+    void (*scan_universe_roots) (SlotsClosure closure);
+    void (*scan_jni_handle_roots) (SlotsClosure closure);
+    void (*scan_object_synchronizer_roots) (SlotsClosure closure);
+    void (*scan_management_roots) (SlotsClosure closure);
+    void (*scan_jvmti_export_roots) (SlotsClosure closure);
+    void (*scan_aot_loader_roots) (SlotsClosure closure);
+    void (*scan_system_dictionary_roots) (SlotsClosure closure);
+    void (*scan_code_cache_roots) (SlotsClosure closure);
+    void (*scan_string_table_roots) (SlotsClosure closure);
+    void (*scan_class_loader_data_graph_roots) (SlotsClosure closure);
+    void (*scan_weak_processor_roots) (SlotsClosure closure);
+    void (*scan_vm_thread_roots) (SlotsClosure closure);
     size_t (*number_of_mutators)();
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+    void (*mmtk_request_starting)(void *jni_env);
+    void (*mmtk_request_finished)(void *jni_env);
+    void (*mmtk_get_oop_klass_name)(void *object, char *buffer, int size);
+    const char* (*mmtk_get_mutator_name)(void *tls);
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);
@@ -219,11 +231,25 @@ extern void mmtk_builder_read_env_var_settings();
 extern void mmtk_builder_set_threads(size_t value);
 extern void mmtk_builder_set_transparent_hugepages(bool value);
 
+extern void mmtk_request_starting_impl();
+extern void mmtk_request_finished_impl();
+
 #ifdef MMTK_ENABLE_PUBLIC_BIT
+
 extern bool mmtk_is_object_published(void *object);
+
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+extern void mmtk_set_public_bit(JavaThread *thread, void *object);
+extern void mmtk_publish_object(JavaThread* thread, void *object);
+extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
+extern void mmtk_register_mutator_name(JavaThread *thread);
+extern void mmtk_mutator_exit(JavaThread *thread);
+#else
 extern void mmtk_set_public_bit(void *object);
 extern void mmtk_publish_object(void *object);
 extern void mmtk_publish_object_with_fence(void *object);
+#endif
+
 #endif
 
 #ifdef __cplusplus
