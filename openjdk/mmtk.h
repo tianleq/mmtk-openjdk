@@ -247,7 +247,7 @@ extern void mmtk_request_global_gc(void *tls);
 
 extern bool mmtk_is_object_published(void *object);
 
-#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING) || defined(MMTK_ENABLE_EXTRA_HEADER)
   extern void mmtk_set_public_bit(JavaThread *thread, void *object);
   extern void mmtk_publish_object(JavaThread* thread, void *object);
   extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
@@ -268,6 +268,9 @@ extern void mmtk_request_thread_local_gc(void *tls);
 extern void mmtk_inc_leak_count(unsigned callsite);
 #endif
 
+#ifdef MMTK_ENABLE_EXTRA_HEADER
+extern void mmtk_update_request_stats(void *tls);
+#endif
 
 #ifdef __cplusplus
 }

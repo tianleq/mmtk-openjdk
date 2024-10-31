@@ -633,7 +633,10 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
     }
 }
 
-#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
+#[cfg(all(
+    feature = "public_bit",
+    not(any(feature = "debug_thread_local_gc_copying", feature = "extra_header"))
+))]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     debug_assert!(
@@ -644,7 +647,10 @@ pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
     0
 }
 
-#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
+#[cfg(all(
+    feature = "public_bit",
+    not(any(feature = "debug_thread_local_gc_copying", feature = "extra_header"))
+))]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
     debug_assert!(
@@ -654,7 +660,10 @@ pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
     with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
 }
 
-#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[cfg(all(
+    feature = "public_bit",
+    any(feature = "debug_thread_local_gc_copying", feature = "extra_header")
+))]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectReference) -> usize {
     debug_assert!(
@@ -665,7 +674,10 @@ pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectRefere
     0
 }
 
-#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[cfg(all(
+    feature = "public_bit",
+    any(feature = "debug_thread_local_gc_copying", feature = "extra_header")
+))]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(tls: VMMutatorThread, object: NullableObjectReference) {
     debug_assert!(
@@ -756,4 +768,12 @@ pub extern "C" fn mmtk_request_starting_impl() {
 #[no_mangle]
 pub extern "C" fn mmtk_request_finished_impl() {
     with_singleton!(|singleton| memory_manager::request_finished(singleton));
+}
+
+#[cfg(all(feature = "extra_header", feature = "thread_local_gc"))]
+#[no_mangle]
+pub extern "C" fn mmtk_update_request_stats(tls: VMMutatorThread) {
+    with_singleton!(
+        |singleton| memory_manager::mmtk_update_request_stats(singleton, tls);
+    );
 }

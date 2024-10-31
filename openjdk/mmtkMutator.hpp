@@ -137,8 +137,12 @@ struct MMTkMutatorContext {
   uint32_t thread_local_gc_status;
   void* finalizable_candidates;
 #endif
-#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING) || defined(MMTK_ENABLE_DEBUG_PUBLISH_OBJECT)
+#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING) || defined(MMTK_ENABLE_EXTRA_HEADER)
   size_t request_id;
+#endif
+#if defined(MMTK_ENABLE_EXTRA_HEADER)
+  bool in_request;
+  uintptr_t request_stats;
 #endif
 #ifdef MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING
   uintptr_t stats;
