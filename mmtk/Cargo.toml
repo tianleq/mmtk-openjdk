@@ -54,8 +54,6 @@ vo_bit = ["mmtk/vo_bit"]
 
 public_bit = ["mmtk/public_bit"]
 debug_publish_object = ["mmtk/debug_publish_object"]
-
-public_bit = ["mmtk/public_bit"]
 thread_local_gc = ["mmtk/thread_local_gc"]
 publish_rate_analysis = ["mmtk/publish_rate_analysis"]
 
