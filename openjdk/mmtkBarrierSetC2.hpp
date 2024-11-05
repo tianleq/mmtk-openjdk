@@ -56,24 +56,28 @@ protected:
   virtual Node* store_at_resolved(C2Access& access, C2AccessValue& val) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), val.node());
     Node* store = BarrierSetC2::store_at_resolved(access, val);
+    // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, store);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), val.node());
     return store;
   }
   virtual Node* atomic_cmpxchg_val_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
     Node* result = BarrierSetC2::atomic_cmpxchg_val_at_resolved(access, expected_val, new_val, value_type);
+    //  if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, result);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
     return result;
   }
   virtual Node* atomic_cmpxchg_bool_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
     Node* load_store = BarrierSetC2::atomic_cmpxchg_bool_at_resolved(access, expected_val, new_val, value_type);
+    // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, load_store);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
     return load_store;
   }
   virtual Node* atomic_xchg_at_resolved(C2AtomicAccess& access, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
     Node* result = BarrierSetC2::atomic_xchg_at_resolved(access, new_val, value_type);
+    // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, result);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
     return result;
   }

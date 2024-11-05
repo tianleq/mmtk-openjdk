@@ -63,7 +63,7 @@ ifeq ($(EXTRA_HEADER), 1)
   ifndef GC_FEATURES
     GC_FEATURES=--features extra_header
   else
-    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header
+    GC_FEATURES:=$(strip $(GC_FEATURES))",extra_header"
   endif
 endif
 
