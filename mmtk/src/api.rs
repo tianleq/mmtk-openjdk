@@ -544,3 +544,23 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
         );
     }
 }
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_starting)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished(jni_env: *const libc::c_void) {
+    unsafe { ((*UPCALLS).request_finished)(jni_env) };
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_starting_impl() {
+    with_singleton!(|singleton| memory_manager::request_starting(singleton));
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_request_finished_impl() {
+    with_singleton!(|singleton| memory_manager::request_finished(singleton));
+}
