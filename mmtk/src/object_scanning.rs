@@ -32,7 +32,7 @@ impl OopIterate for OopMapBlock {
             #[cfg(not(feature = "debug_publish_object"))]
             closure.visit_slot(slot);
             #[cfg(feature = "debug_publish_object")]
-            closure.visit_slot(_source, edge);
+            closure.visit_slot(_source, slot);
         }
     }
 }
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn scan_object_fn<
     let ptr: *mut u8 = CLOSURE.with(|x| *x.get());
     let closure = &mut *(ptr as *mut V);
     #[cfg(feature = "debug_publish_object")]
-    closure.visit_slot(edge.load(), edge.into());
+    closure.visit_slot(slot.load(), slot.into());
     #[cfg(not(feature = "debug_publish_object"))]
     closure.visit_slot(slot.into());
 }

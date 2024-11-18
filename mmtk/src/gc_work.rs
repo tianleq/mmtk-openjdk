@@ -85,7 +85,7 @@ impl<const COMPRESSED: bool, F: RootsWorkFactory<OpenJDKSlot<COMPRESSED>>>
         }
         #[cfg(feature = "debug_publish_object")]
         // Create work packet
-        self.factory.create_process_edge_roots_work(0xFF, edges);
+        self.factory.create_process_roots_work(0xFF, slots);
         // Use the following code to scan CodeCache directly, instead of scanning the "remembered set".
         // unsafe {
         //     ((*UPCALLS).scan_code_cache_roots)(to_slots_closure(&mut self.factory));
