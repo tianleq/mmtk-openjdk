@@ -76,4 +76,8 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
             ((*UPCALLS).schedule_finalizer)();
         }
     }
+
+    fn do_thread_local_gc(tls: VMMutatorThread) {
+        unsafe { ((*UPCALLS).execute_thread_local_gc)(tls) }
+    }
 }

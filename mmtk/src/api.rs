@@ -690,6 +690,14 @@ pub extern "C" fn mmtk_do_thread_local_gc(_tls: VMMutatorThread) {
     )
 }
 
+#[cfg(feature = "thread_local_gc")]
+#[no_mangle]
+pub extern "C" fn mmtk_set_compiler_thread(_tls: VMMutatorThread) {
+    with_singleton!(
+        |singleton| memory_manager::mmtk_handle_user_triggered_local_gc(singleton, _tls,)
+    )
+}
+
 #[no_mangle]
 pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
     if crate::use_compressed_oops() {
