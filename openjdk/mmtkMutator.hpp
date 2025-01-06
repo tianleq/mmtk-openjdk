@@ -145,6 +145,7 @@ struct MMTkMutatorContext {
 #endif
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
   size_t local_allocation_size;
+  bool is_compiler;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);

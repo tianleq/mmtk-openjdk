@@ -262,6 +262,7 @@ extern bool mmtk_is_object_published(void *object);
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 extern void mmtk_do_thread_local_gc(void *tls);
 extern void mmtk_request_thread_local_gc(void *tls);
+extern void mmtk_set_compiler_thread(void *tls);
 #endif
 
 #ifdef DEBUG_PUBLISH_OBJECT
