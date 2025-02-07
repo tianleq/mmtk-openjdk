@@ -309,6 +309,18 @@ static void mmtk_enqueue_references(void** objects, size_t len) {
   assert(Universe::has_reference_pending_list(), "Reference pending list is empty after swap");
 }
 
+#ifdef MMTK_ENABLE_IMMIX_ALLOCATION_POLICY
+static size_t compute_allocator_mem_layout_checksum() {
+  return sizeof(ImmixAllocator)
+    ^ sizeof(BumpAllocator)
+    ^ sizeof(LargeObjectAllocator);
+}
+
+static size_t compute_mutator_mem_layout_checksum() {
+  return sizeof(MMTkMutatorContext);
+}
+#endif
+
 OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_stop_all_mutators,
   mmtk_resume_mutators,
@@ -346,5 +358,9 @@ OpenJDK_Upcalls mmtk_upcalls = {
   mmtk_number_of_mutators,
   mmtk_schedule_finalizer,
   mmtk_prepare_for_roots_re_scanning,
-  mmtk_enqueue_references
+  mmtk_enqueue_references,
+#ifdef MMTK_ENABLE_IMMIX_ALLOCATION_POLICY
+  compute_allocator_mem_layout_checksum,
+  compute_mutator_mem_layout_checksum,
+#endif
 };

@@ -180,6 +180,10 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
+#ifdef MMTK_ENABLE_IMMIX_ALLOCATION_POLICY
+    size_t (*compute_allocator_mem_layout_checksum) ();
+    size_t (*compute_mutator_mem_layout_checksum) ();
+#endif
 } OpenJDK_Upcalls;
 
 extern void openjdk_gc_init(OpenJDK_Upcalls *calls);

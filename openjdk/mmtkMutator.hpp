@@ -56,6 +56,11 @@ struct ImmixAllocator {
   uint8_t _align[7];
   uint8_t line_opt_tag;
   uintptr_t line_opt;
+#ifdef MMTK_ENABLE_IMMIX_ALLOCATION_POLICY
+  uint8_t overflow_line_opt_tag;
+  uintptr_t overflow_line_opt;
+  uintptr_t overflow_reusable_blocks;
+#endif
 };
 
 struct FLBlock {
