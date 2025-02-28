@@ -65,7 +65,7 @@ static void mmtk_stop_all_mutators(void *tls, MutatorClosure closure) {
   JavaThreadIteratorWithHandle jtiwh;
   while (JavaThread *cur = jtiwh.next()) {
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
-    assert(!cur->third_party_heap_mutator.thread_local_gc_status, "global gc and local gc has to be mutually exclusive");
+    assert(cur->third_party_heap_mutator.thread_local_gc_status != 1, "global gc and local gc has to be mutually exclusive");
 
 #endif
     closure.invoke((void*)&cur->third_party_heap_mutator);
@@ -358,7 +358,7 @@ static void mmtk_request_end(void *jni_env)
 
 #if defined(MMTK_ENABLE_THREAD_LOCAL_GC) 
   {
-    mmtk_request_thread_local_gc(thread);
+    // mmtk_request_thread_local_gc(thread);
   }
 #endif
 

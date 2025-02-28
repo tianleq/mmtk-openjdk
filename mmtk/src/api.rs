@@ -670,12 +670,15 @@ pub extern "C" fn mmtk_request_thread_local_gc(_tls: VMMutatorThread) {
         crate::use_compressed_oops() == false,
         "compressed pointer is not supported"
     );
+    use crate::collection::VMCollection;
+    use mmtk::vm::Collection;
 
-    with_singleton!(
-        |singleton| if memory_manager::mmtk_request_thread_local_gc(singleton, _tls,) {
-            unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
-        }
-    );
+    <VMCollection as Collection<OpenJDK<false>>>::request_thread_local_collection(_tls);
+    // with_singleton!(
+    //     |singleton| if memory_manager::mmtk_request_thread_local_gc(singleton, _tls,) {
+    //         unsafe { ((*UPCALLS).execute_thread_local_gc)(_tls) };
+    //     }
+    // );
 }
 
 #[cfg(feature = "thread_local_gc")]

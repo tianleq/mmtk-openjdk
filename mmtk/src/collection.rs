@@ -9,6 +9,18 @@ use mmtk::vm::ObjectGraphTraversal;
 use mmtk::vm::{Collection, GCThreadContext};
 use mmtk::Mutator;
 
+macro_rules! with_singleton {
+    (|$x: ident| $($expr:tt)*) => {
+        if crate::use_compressed_oops() {
+            let $x: &'static mmtk::MMTK<crate::OpenJDK<true>> = &*crate::SINGLETON_COMPRESSED;
+            $($expr)*
+        } else {
+            let $x: &'static mmtk::MMTK<crate::OpenJDK<false>> = &*crate::SINGLETON_UNCOMPRESSED;
+            $($expr)*
+        }
+    };
+}
+
 pub struct VMCollection {}
 
 const GC_THREAD_KIND_WORKER: libc::c_int = 1;
@@ -52,6 +64,17 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
                 tls,
             );
         }
+    }
+
+    #[cfg(feature = "thread_local_gc")]
+    fn request_thread_local_collection(tls: VMMutatorThread) {
+        use mmtk::memory_manager;
+
+        with_singleton!(
+            |singleton| if memory_manager::mmtk_request_thread_local_gc(singleton, tls,) {
+                unsafe { ((*UPCALLS).execute_thread_local_gc)(tls) };
+            }
+        );
     }
 
     fn spawn_gc_thread(tls: VMThread, ctx: GCThreadContext<OpenJDK<COMPRESSED>>) {
