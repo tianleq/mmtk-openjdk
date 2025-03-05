@@ -211,7 +211,7 @@ fn oop_iterate_slow<const COMPRESSED: bool, V: SlotVisitor<S<COMPRESSED>>>(
 fn oop_iterate<const COMPRESSED: bool>(oop: Oop, closure: &mut impl SlotVisitor<S<COMPRESSED>>) {
     let klass = oop.klass::<COMPRESSED>();
     let klass_id = klass.id;
-    assert!(
+    debug_assert!(
         klass_id as i32 >= 0 && (klass_id as i32) < 6,
         "Invalid klass-id: {:x} for oop: {:x}",
         klass_id as i32,
