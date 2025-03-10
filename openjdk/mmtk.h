@@ -270,6 +270,7 @@ extern void mmtk_inc_leak_count(unsigned callsite);
 
 #ifdef MMTK_ENABLE_EXTRA_HEADER
 extern void mmtk_update_request_stats(void *tls, bool server);
+extern void mmtk_clear_request_stats(void *tls);
 #endif
 
 #ifdef __cplusplus
