@@ -772,8 +772,8 @@ pub extern "C" fn mmtk_request_finished_impl() {
 
 #[cfg(all(feature = "extra_header", feature = "thread_local_gc"))]
 #[no_mangle]
-pub extern "C" fn mmtk_update_request_stats(tls: VMMutatorThread) {
+pub extern "C" fn mmtk_update_request_stats(tls: VMMutatorThread, server: bool) {
     with_singleton!(
-        |singleton| memory_manager::mmtk_update_request_stats(singleton, tls);
+        |singleton| memory_manager::mmtk_update_request_stats(singleton, tls, server);
     );
 }

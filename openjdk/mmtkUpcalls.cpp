@@ -350,7 +350,7 @@ static void mmtk_request_start(void *jni_env)
 #endif
 }
 
-static void mmtk_request_end(void *jni_env)
+static void mmtk_request_end(void *jni_env, bool server)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   // This upcall is used by the jni function, so the thread is in native state
@@ -366,7 +366,7 @@ static void mmtk_request_end(void *jni_env)
 #endif
 #if defined(MMTK_ENABLE_EXTRA_HEADER)
   mutator->in_request = false;
-  mmtk_update_request_stats(thread);
+  mmtk_update_request_stats(thread, server);
 #endif
 }
 

@@ -191,7 +191,7 @@ typedef struct {
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
     void (*mmtk_request_start)(void *jni_env);
-    void (*mmtk_request_end)(void *jni_env);
+    void (*mmtk_request_end)(void *jni_env, bool server);
     void (*mmtk_request_starting)(void *jni_env);
     void (*mmtk_request_finished)(void *jni_env);
     size_t (*compute_allocator_mem_layout_checksum) ();
@@ -269,7 +269,7 @@ extern void mmtk_inc_leak_count(unsigned callsite);
 #endif
 
 #ifdef MMTK_ENABLE_EXTRA_HEADER
-extern void mmtk_update_request_stats(void *tls);
+extern void mmtk_update_request_stats(void *tls, bool server);
 #endif
 
 #ifdef __cplusplus
