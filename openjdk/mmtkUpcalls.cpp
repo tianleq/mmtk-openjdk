@@ -403,7 +403,7 @@ static void mmtk_thread_local_gc_epilogue(Thread *thread) {
 static void mmtk_execute_thread_local_gc(void *tls)
 {
   // When reaching here, thread is already in vm
-  // therefore, it is considered as unsfae and no 
+  // therefore, it is considered as unsafe and no 
   // safepoint operations can occur
   JavaThread *thread = (JavaThread *) tls;
   mmtk_thread_local_gc_prologue(thread);
