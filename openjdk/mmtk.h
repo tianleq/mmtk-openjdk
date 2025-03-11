@@ -190,7 +190,7 @@ typedef struct {
     void (*schedule_finalizer)();
     void (*prepare_for_roots_re_scanning)();
     void (*enqueue_references)(void** objects, size_t len);
-    void (*mmtk_request_start)(void *jni_env);
+    void (*mmtk_request_start)(void *jni_env, bool server);
     void (*mmtk_request_end)(void *jni_env, bool server);
     void (*mmtk_request_starting)(void *jni_env);
     void (*mmtk_request_finished)(void *jni_env);

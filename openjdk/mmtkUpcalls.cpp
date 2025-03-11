@@ -337,7 +337,7 @@ static void mmtk_request_finished(void *jni_env)
   mmtk_request_finished_impl();
 }
 
-static void mmtk_request_start(void *jni_env)
+static void mmtk_request_start(void *jni_env, bool server)
 {
   JavaThread *thread = JavaThread::thread_from_jni_environment((JNIEnv *)jni_env);
   ThreadInVMfromNative tiv(thread);
@@ -347,9 +347,6 @@ static void mmtk_request_start(void *jni_env)
 #endif
 #if defined(MMTK_ENABLE_EXTRA_HEADER)
   mutator->in_request = true;
-#if defined(MMTK_ENABLE_THREAD_LOCAL_GC)
-  mmtk_clear_request_stats(thread);
-#endif
 #endif
 }
 

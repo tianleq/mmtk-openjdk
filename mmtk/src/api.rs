@@ -735,13 +735,13 @@ pub extern "C" fn mmtk_request_global_gc(tls: VMMutatorThread) {
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void) {
-    unsafe { ((*UPCALLS).request_start)(jni_env) };
+pub extern "C" fn mmtk_request_start(jni_env: *const libc::c_void, server: bool) {
+    unsafe { ((*UPCALLS).request_start)(jni_env, server) };
 }
 
 #[no_mangle]
-pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void) {
-    unsafe { ((*UPCALLS).request_end)(jni_env) };
+pub extern "C" fn mmtk_request_end(jni_env: *const libc::c_void, server: bool) {
+    unsafe { ((*UPCALLS).request_end)(jni_env, server) };
 }
 
 #[cfg(feature = "debug_publish_object")]
