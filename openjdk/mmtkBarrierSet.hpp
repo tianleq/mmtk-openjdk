@@ -36,8 +36,11 @@
 #include "oops/accessBackend.hpp"
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/fakeRttiSupport.hpp"
-
+#if defined(MMTK_PUBLISH_RATE_ANALYSIS)
+#define MMTK_ENABLE_ALLOCATION_FASTPATH false
+#else
 #define MMTK_ENABLE_ALLOCATION_FASTPATH true
+#endif
 #define MMTK_ENABLE_BARRIER_FASTPATH true
 
 const intptr_t VO_BIT_BASE_ADDRESS = VO_BIT_ADDRESS;
