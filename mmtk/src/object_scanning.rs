@@ -178,15 +178,15 @@ impl InstanceRefKlass {
         let _source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address::<COMPRESSED>(oop);
         #[cfg(not(feature = "debug_publish_object"))]
-        closure.visit_slot(referent_addr.into());
+        closure.visit_slot(referent_addr);
         #[cfg(feature = "debug_publish_object")]
-        closure.visit_slot(_source, referent_addr.into());
+        closure.visit_slot(_source, referent_addr);
 
         let discovered_addr = Self::discovered_address::<COMPRESSED>(oop);
         #[cfg(not(feature = "debug_publish_object"))]
-        closure.visit_slot(discovered_addr.into());
+        closure.visit_slot(discovered_addr);
         #[cfg(feature = "debug_publish_object")]
-        closure.visit_slot(_source, discovered_addr.into());
+        closure.visit_slot(_source, discovered_addr);
     }
 }
 
