@@ -36,7 +36,7 @@
 #include "oops/accessBackend.hpp"
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/fakeRttiSupport.hpp"
-#if defined(MMTK_PUBLISH_RATE_ANALYSIS)
+#if defined(MMTK_PUBLISH_RATE_ANALYSIS) || defined(MMTK_ALLOCATION_STATS)
 #define MMTK_ENABLE_ALLOCATION_FASTPATH false
 #else
 #define MMTK_ENABLE_ALLOCATION_FASTPATH true
