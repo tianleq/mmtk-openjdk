@@ -383,6 +383,26 @@ void MMTkHeap::print_tracing_info() const {
   //guarantee(false, "print tracing info not supported");
 }
 
+class MMTkClassAllocator: public ClassAllocator {
+  public:
+    MMTkClassAllocator(Klass* klass, size_t word_size, Thread* thread = Thread::current())
+      : ClassAllocator(klass, word_size, thread) {}
+    virtual oop initialize(HeapWord* mem) const;
+  };
+  
+  oop MMTkClassAllocator::initialize(HeapWord* mem) const {
+    oop result = ClassAllocator::initialize(mem);
+  #ifdef MMTK_ENABLE_PUBLIC_BIT
+  #if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+    JavaThread *thread = Thread::current()->is_Java_thread() ? (JavaThread *) Thread::current() : NULL;
+    ::mmtk_set_public_bit(thread, result);
+  #else
+    ::mmtk_set_public_bit(result);
+  #endif
+    OrderAccess::fence();
+  #endif
+    return result;
+  }
 
 // Registering and unregistering an nmethod (compiled code) with the heap.
 // Override with specific mechanism for each specialized heap type.
@@ -507,6 +527,10 @@ HeapWord* MMTkHeap::mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_wa
   return Thread::current()->third_party_heap_mutator.alloc(size << LogHeapWordSize, AllocatorLos);
 }
 
+oop MMTkHeap::class_allocate(Klass* klass, int size, TRAPS) {
+  MMTkClassAllocator allocator(klass, size, THREAD);
+  return allocator.allocate();
+}
 /*
  * files with prints currently:
  * collectedHeap.inline.hpp, mmtkHeap.cpp,
