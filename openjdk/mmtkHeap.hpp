@@ -78,6 +78,12 @@ public:
   HeapWord* mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_was_exceeded);
   virtual oop class_allocate(Klass* klass, int size, TRAPS);
 
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC)
+  virtual oop public_obj_allocate(Klass *klass, int size, TRAPS);
+  virtual oop public_array_allocate(Klass *klass, int size, int length, bool do_zero, TRAPS);
+  HeapWord* mem_allocate_public(size_t size, bool* gc_overhead_limit_was_exceeded);
+#endif
+
   MMTkVMCompanionThread* companion_thread() const {
     return _companion_thread;
   }

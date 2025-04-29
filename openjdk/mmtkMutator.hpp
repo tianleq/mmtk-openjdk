@@ -11,6 +11,9 @@ enum Allocator {
   AllocatorLos = 2,
   AllocatorCode = 3,
   AllocatorReadOnly = 4,
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC)
+  AllocatorPublic = 7,
+#endif
 };
 
 struct RustDynPtr {

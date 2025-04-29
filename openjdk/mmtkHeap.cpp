@@ -530,8 +530,25 @@ HeapWord* MMTkHeap::mem_allocate_nonmove(size_t size, bool* gc_overhead_limit_wa
 
 oop MMTkHeap::class_allocate(Klass* klass, int size, TRAPS) {
   MMTkClassAllocator allocator(klass, size, THREAD);
-  return allocator.allocate();
+  return allocator.allocate_public();
 }
+
+
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC)
+oop MMTkHeap::public_obj_allocate(Klass* klass, int size, TRAPS) {
+  ObjAllocator allocator(klass, size, THREAD);
+  return allocator.allocate_public();
+}
+oop MMTkHeap::public_array_allocate(Klass* klass, int size, int length, bool do_zero, TRAPS) {
+  ObjArrayAllocator allocator(klass, size, length, do_zero, THREAD);
+  return allocator.allocate_public();
+}
+
+HeapWord* MMTkHeap::mem_allocate_public(size_t size, bool* gc_overhead_limit_was_exceeded) {
+  return Thread::current()->third_party_heap_mutator.alloc(size << LogHeapWordSize, AllocatorPublic);
+}
+
+#endif
 /*
  * files with prints currently:
  * collectedHeap.inline.hpp, mmtkHeap.cpp,
