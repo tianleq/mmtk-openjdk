@@ -632,6 +632,19 @@ pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
     with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
 }
 
+#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
+#[no_mangle]
+pub extern "C" fn mmtk_publish_runtime_object(object: NullableObjectReference) {
+    debug_assert!(
+        !crate::use_compressed_oops(),
+        "compressed pointer is not supported"
+    );
+    with_singleton!(|singleton| memory_manager::mmtk_publish_runtime_object(
+        singleton,
+        object.into()
+    ));
+}
+
 #[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectReference) -> usize {
