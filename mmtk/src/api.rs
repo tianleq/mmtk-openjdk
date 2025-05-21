@@ -321,16 +321,6 @@ pub extern "C" fn mmtk_harness_begin_impl() {
 
 #[no_mangle]
 pub extern "C" fn harness_end(_id: usize) {
-    #[cfg(feature = "debug_publish_object")]
-    {
-        println!("********************************************");
-        println!(
-            "{} objects leaked in JIT compiler thread",
-            OBJECT_LEAK_IN_JIT_COUNT.load(Ordering::SeqCst)
-        );
-        println!("********************************************");
-    }
-
     unsafe { ((*UPCALLS).harness_end)() };
 }
 
