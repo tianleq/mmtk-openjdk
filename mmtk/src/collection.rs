@@ -57,4 +57,9 @@ impl<const COMPRESSED: bool> Collection<OpenJDK<COMPRESSED>> for VMCollection {
             ((*UPCALLS).schedule_finalizer)();
         }
     }
+
+    #[cfg(feature = "satb")]
+    fn set_concurrent_marking_state(active: bool) {
+        unsafe { crate::CONCURRENT_MARKING_ACTIVE = if active { 1 } else { 0 } }
+    }
 }

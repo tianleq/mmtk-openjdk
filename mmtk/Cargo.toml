@@ -35,9 +35,9 @@ probe = "0.5"
 # - change branch
 # - change repo name
 # But other changes including adding/removing whitespaces in commented lines may break the CI.
-mmtk = { git = "https://github.com/mmtk/mmtk-core.git", rev = "42a434bf2280b0a9e10439cc7061a0f07af83d71" }
+# mmtk = { git = "https://github.com/mmtk/mmtk-core.git", rev = "42a434bf2280b0a9e10439cc7061a0f07af83d71" }
 # Uncomment the following to build locally
-# mmtk = { path = "../repos/mmtk-core" }
+mmtk = { path = "../../mmtk-core" }
 
 [build-dependencies]
 built = { version = "0.7.7", features = ["git2"] }
@@ -59,6 +59,9 @@ forwarding_bits_on_side = []
 
 # Use malloc mark sweep - we should only run marksweep with this feature turned on.
 malloc_mark_sweep = ["mmtk/malloc_mark_sweep"]
+
+# Concurrent Marking Immix
+satb = ["mmtk/satb"]
 
 # We can select plan at runtime. So no need to use any of these features.
 # However, if any of these is provided during build-time, we will ignore any runtime flag and
