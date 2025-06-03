@@ -11,6 +11,7 @@ class MMTkBarrierSetC1 : public BarrierSetC1 {
 
 protected:
   CodeBlob* _write_barrier_c1_runtime_code_blob;
+  CodeBlob* _ref_load_barrier_c1_runtime_code_blob;
 
   /// Full pre-barrier
   virtual void object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val) const {}
