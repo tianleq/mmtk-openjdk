@@ -7,7 +7,7 @@
 constexpr int kUnloggedValue = 1;
 
 static inline intptr_t side_metadata_base_address() {
-  return UseCompressedOops ? SIDE_METADATA_BASE_ADDRESS : SIDE_METADATA_BASE_ADDRESS;
+  return UseCompressedOops ? SATB_METADATA_BASE_ADDRESS : SATB_METADATA_BASE_ADDRESS;
 }
 
 void MMTkSATBBarrierSetRuntime::load_reference(DecoratorSet decorators, oop value) const {
@@ -22,7 +22,7 @@ void MMTkSATBBarrierSetRuntime::object_probable_write(oop new_obj) const {
   // Do fast-path check before entering mmtk rust code, to improve mutator performance.
   // This is identical to calling `mmtk_object_probable_write` directly without a fast-path.
   intptr_t addr = (intptr_t) (void*) new_obj;
-  uint8_t* meta_addr = (uint8_t*) (SIDE_METADATA_BASE_ADDRESS + (addr >> 6));
+  uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
   intptr_t shift = (addr >> 3) & 0b111;
   uint8_t byte_val = *meta_addr;
   if (((byte_val >> shift) & 1) == 1) {
@@ -39,7 +39,7 @@ void MMTkSATBBarrierSetRuntime::object_probable_write(oop new_obj) const {
 void MMTkSATBBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
 #if MMTK_ENABLE_BARRIER_FASTPATH
   intptr_t addr = (intptr_t) (void*) src;
-  uint8_t* meta_addr = (uint8_t*) (SIDE_METADATA_BASE_ADDRESS + (addr >> 6));
+  uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
   intptr_t shift = (addr >> 3) & 0b111;
   uint8_t byte_val = *meta_addr;
   if (((byte_val >> shift) & 1) == 1) {

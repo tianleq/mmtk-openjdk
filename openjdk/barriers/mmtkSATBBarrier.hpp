@@ -16,7 +16,7 @@
 #define LOG_BYTES_IN_CHUNK 22
 #define CHUNK_MASK ((1L << LOG_BYTES_IN_CHUNK) - 1)
 
-const intptr_t SIDE_METADATA_BASE_ADDRESS = (intptr_t) GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
+const intptr_t SATB_METADATA_BASE_ADDRESS = (intptr_t) GLOBAL_SIDE_METADATA_VM_BASE_ADDRESS;
 
 class MMTkSATBBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:

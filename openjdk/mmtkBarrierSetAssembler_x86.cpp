@@ -230,8 +230,30 @@ void MMTkBarrierSetAssembler::generate_c1_ref_load_barrier_stub_call(LIR_Assembl
 void MMTkBarrierSetAssembler::generate_c1_write_barrier_stub_call(LIR_Assembler* ce, MMTkC1BarrierStub* stub) {
   MMTkBarrierSetC1* bs = (MMTkBarrierSetC1*) BarrierSet::barrier_set()->barrier_set_c1();
   __ bind(*stub->entry());
+
+  // For pre-barriers, stub->slot may not be a resolved address.
+  // Manually patch the address and goes to the slow-path unconditionally.
+  address runtime_address;
+  if (stub->patch_code != lir_patch_none) {
+    // Patch
+    assert(stub->scratch->is_single_cpu(), "must be");
+    assert(stub->scratch->is_register(), "Precondition.");
+    ce->mem2reg(stub->slot, stub->scratch, T_OBJECT, stub->patch_code, stub->info, false /*wide*/, false /*unaligned*/);
+    // Resolve address
+    auto masm = ce->masm();
+    LIR_Address* addr = stub->slot->as_address_ptr();
+    Address from_addr = ce->as_Address(addr);
+    __ lea(stub->scratch->as_register(), from_addr);
+    // Store parameter
+    ce->store_parameter(stub->scratch->as_pointer_register(), 1);
+    runtime_address = bs->_write_barrier_c1_runtime_code_blob_with_patch_fix->code_begin();
+  } else {
+    // Store parameter
+    ce->store_parameter(stub->slot->as_pointer_register(), 1);
+    runtime_address = bs->_write_barrier_c1_runtime_code_blob->code_begin();
+  }
+
   ce->store_parameter(stub->src->as_pointer_register(), 0);
-  ce->store_parameter(stub->slot->as_pointer_register(), 1);
   ce->store_parameter(stub->new_val->as_pointer_register(), 2);
   __ call(RuntimeAddress(bs->_write_barrier_c1_runtime_code_blob->code_begin()));
   __ jmp(*stub->continuation());

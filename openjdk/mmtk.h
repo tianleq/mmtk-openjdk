@@ -47,6 +47,9 @@ extern void* alloc_slow_largeobject(MMTk_Mutator mutator, size_t size,
 extern void post_alloc(MMTk_Mutator mutator, void* refer,
     size_t bytes, int allocator);
 
+/// java.lang.Reference load barrier
+extern void mmtk_load_reference(MMTk_Mutator mutator, void* obj);
+
 /// Full pre-barrier
 extern void mmtk_object_reference_write_pre(MMTk_Mutator mutator, void* src, void* slot, void* target);
 
@@ -61,6 +64,8 @@ extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size
 
 /// Full array-copy post-barrier
 extern void mmtk_array_copy_post(MMTk_Mutator mutator, void* src, void* dst, size_t count);
+
+extern void mmtk_object_reference_clone_pre(MMTk_Mutator mutator, void* obj);
 
 /// C2 slowpath allocation barrier
 extern void mmtk_object_probable_write(MMTk_Mutator mutator, void* obj);

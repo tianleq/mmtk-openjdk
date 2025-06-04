@@ -72,7 +72,7 @@ public:
   static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
   /// Generic arraycopy pre-barrier. Called by fast-paths.
   static void object_reference_array_copy_post_call(void* src, void* dst, size_t count);
-    static void object_reference_clone_pre_call(void* obj);
+  static void object_reference_clone_pre_call(void* obj);
   /// Check if the address is a slow-path function.
   virtual bool is_slow_path_call(address call) const {
     return call == CAST_FROM_FN_PTR(address, object_reference_write_pre_call)
