@@ -24,9 +24,9 @@ void MMTkSATBBarrierSetRuntime::object_probable_write(oop new_obj) const {
 
 void MMTkSATBBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
 #if MMTK_ENABLE_BARRIER_FASTPATH
-  oop pre_val = *slot;
-  if (pre_val == NULL) return;
-  intptr_t addr = (intptr_t) (void*) pre_val;
+  // oop pre_val = *slot;
+  // if (pre_val == NULL) return;
+  intptr_t addr = (intptr_t) (void*) src;
   uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
   intptr_t shift = (addr >> 3) & 0b111;
   uint8_t byte_val = *meta_addr;
@@ -76,15 +76,17 @@ void MMTkSATBBarrierSetAssembler::object_reference_write_pre(MacroAssembler* mas
   #if MMTK_ENABLE_BARRIER_FASTPATH
   Label done;
 
+  Register obj = dst.base();
   Register tmp3 = rscratch1;
   Register tmp4 = rscratch2;
   Register tmp5 = tmp1 == dst.base() || tmp1 == dst.index() ? tmp2 : tmp1;
 
   // tmp5 = load-byte (side_metadata_base_address() + (obj >> 6));
-  __ load_heap_oop(tmp3, dst, noreg, noreg, AS_RAW);
-  // Is the previous value null?
-  __ cmpptr(tmp3, (int32_t) NULL_WORD);
-  __ jcc(Assembler::equal, done);
+  __ movptr(tmp3, obj);
+  // __ load_heap_oop(tmp3, dst, noreg, noreg, AS_RAW);
+  // // Is the previous value null?
+  // __ cmpptr(tmp3, (int32_t) NULL_WORD);
+  // __ jcc(Assembler::equal, done);
 
   __ shrptr(tmp3, UseCompressedOops ? 5 : 6);
   __ movptr(tmp5, side_metadata_base_address());
@@ -321,14 +323,14 @@ void MMTkSATBBarrierSetC1::object_reference_write_pre(LIRAccess& access, LIR_Opr
     // FIXME: Jump to a medium-path for code patching without entering slow-path
     __ jump(slow);
   } else {
-    // load pre_val 
-    LIR_Address* slot_addr = new LIR_Address(slot, T_OBJECT);
-    LIR_Opr addr = slot;
-    __ load(slot_addr, addr);
-    // if pre_val == NULL skip the barrier
-    __ cmp(lir_cond_equal, addr, LIR_OprFact::oopConst(NULL));
-    __ branch(lir_cond_equal, T_OBJECT, slow->continuation());
-
+    // // load pre_val 
+    // LIR_Address* slot_addr = new LIR_Address(slot, T_OBJECT);
+    // LIR_Opr addr = slot;
+    // __ load(slot_addr, addr);
+    // // if pre_val == NULL skip the barrier
+    // __ cmp(lir_cond_equal, addr, LIR_OprFact::oopConst(NULL));
+    // __ branch(lir_cond_equal, T_OBJECT, slow->continuation());
+    LIR_Opr addr = src;
     // uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
     LIR_Opr offset = gen->new_pointer_register();
     __ move(addr, offset);
@@ -370,12 +372,11 @@ void MMTkSATBBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, 
   MMTkIdealKit ideal(kit, true);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
-  Node* pre_val = NULL;
   Node* no_base = __ top();
   float unlikely  = PROB_UNLIKELY(0.999);
 
   Node* zero  = __ ConI(0);
-  Node* addr = __ CastPX(__ ctrl(), pre_val);
+  Node* addr = __ CastPX(__ ctrl(), src);
   Node* meta_addr = __ AddP(no_base, __ ConP(side_metadata_base_address()), __ URShiftX(addr, __ ConI(UseCompressedOops ? 5 : 6)));
   Node* byte = __ load(__ ctrl(), meta_addr, TypeInt::INT, T_BYTE, Compile::AliasIdxRaw);
 

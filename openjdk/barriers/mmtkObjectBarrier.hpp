@@ -32,10 +32,8 @@ class MMTkObjectBarrierSetAssembler: public MMTkBarrierSetAssembler {
 protected:
   virtual void object_reference_write_post(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2, bool compensate_val_reg) const override;
   /// Generate C1 write barrier slow-call assembly code
-  virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const {}
   virtual void generate_c1_post_write_barrier_runtime_stub(StubAssembler* sasm) const;
 public:
-  virtual void generate_c1_pre_write_barrier_stub(LIR_Assembler* ce, MMTkC1PreBarrierStub* stub) const {}
   virtual void generate_c1_post_write_barrier_stub(LIR_Assembler* ce, MMTkC1PostBarrierStub* stub) const;
   virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) override;
   virtual void arraycopy_epilogue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) override;
