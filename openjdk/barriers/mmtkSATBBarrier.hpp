@@ -37,10 +37,8 @@ protected:
   virtual void object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const override;
   /// Generate C1 write barrier slow-call assembly code
   virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const;
-  virtual void generate_c1_post_write_barrier_runtime_stub(StubAssembler* sasm) const {}
 public:
   virtual void generate_c1_pre_write_barrier_stub(LIR_Assembler* ce, MMTkC1PreBarrierStub* stub) const;
-  virtual void generate_c1_post_write_barrier_stub(LIR_Assembler* ce, MMTkC1PostBarrierStub* stub) const {};
   virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) override;
   virtual void load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register dst, Address src, Register tmp1, Register tmp_thread) override;
 };
@@ -56,11 +54,6 @@ protected:
   virtual LIR_Opr resolve_address(LIRAccess& access, bool resolve_in_register) override {
     return MMTkBarrierSetC1::resolve_address_in_register(access, resolve_in_register);
   }
-public:
-  MMTkSATBBarrierSetC1()
-    : _pre_barrier_c1_runtime_code_blob(NULL) {}
-  CodeBlob* pre_barrier_c1_runtime_code_blob() { return _pre_barrier_c1_runtime_code_blob; }
-  virtual void generate_c1_runtime_stubs(BufferBlob* buffer_blob);
 };
 
 class MMTkSATBBarrierSetC2: public MMTkBarrierSetC2 {
