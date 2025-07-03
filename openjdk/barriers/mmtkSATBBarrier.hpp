@@ -45,8 +45,6 @@ public:
 
 class MMTkSATBBarrierSetC1: public MMTkBarrierSetC1 {
 protected:
-  CodeBlob* _pre_barrier_c1_runtime_code_blob;
-
   virtual void object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo* info) const override;
 
   virtual void load_at_resolved(LIRAccess& access, LIR_Opr result) override;
@@ -54,10 +52,6 @@ protected:
   virtual LIR_Opr resolve_address(LIRAccess& access, bool resolve_in_register) override {
     return MMTkBarrierSetC1::resolve_address_in_register(access, resolve_in_register);
   }
-public:
-  MMTkSATBBarrierSetC1()
-    : _pre_barrier_c1_runtime_code_blob(NULL) {}
-  CodeBlob* pre_barrier_c1_runtime_code_blob() { return _pre_barrier_c1_runtime_code_blob; }
 };
 
 class MMTkSATBBarrierSetC2: public MMTkBarrierSetC2 {
