@@ -370,7 +370,6 @@ void MMTkSATBBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, 
   MMTkIdealKit ideal(kit, true);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
-  Node* pre_val = NULL;
   Node* no_base = __ top();
   float unlikely  = PROB_UNLIKELY(0.999);
 
