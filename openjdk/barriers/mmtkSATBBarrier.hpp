@@ -45,7 +45,6 @@ public:
 
 class MMTkSATBBarrierSetC1: public MMTkBarrierSetC1 {
 protected:
-  CodeBlob* _pre_barrier_c1_runtime_code_blob;
 
   virtual void object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo* info) const override;
 
