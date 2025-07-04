@@ -93,7 +93,7 @@ void MMTkSATBBarrierSetAssembler::object_reference_write_pre(MacroAssembler* mas
   __ movzbl(tmp5, Address(tmp5, tmp3));
 
   // tmp3 = (obj >> 3) & 7
-  __ load_heap_oop(tmp3, dst, noreg, noreg, AS_RAW);
+  __ mov(tmp3, obj);
   __ shrptr(tmp3, UseCompressedOops ? 2 : 3);
   __ andptr(tmp3, 7);
   // tmp5 = tmp5 >> tmp3
