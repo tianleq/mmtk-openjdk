@@ -37,8 +37,8 @@
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/fakeRttiSupport.hpp"
 
-#define MMTK_ENABLE_ALLOCATION_FASTPATH true
-#define MMTK_ENABLE_BARRIER_FASTPATH true
+#define MMTK_ENABLE_ALLOCATION_FASTPATH false
+#define MMTK_ENABLE_BARRIER_FASTPATH false
 
 const intptr_t VO_BIT_BASE_ADDRESS = VO_BIT_ADDRESS;
 
@@ -79,7 +79,9 @@ public:
         || call == CAST_FROM_FN_PTR(address, object_reference_write_post_call)
         || call == CAST_FROM_FN_PTR(address, object_reference_write_slow_call)
         || call == CAST_FROM_FN_PTR(address, object_reference_array_copy_pre_call)
-        || call == CAST_FROM_FN_PTR(address, object_reference_array_copy_post_call);
+        || call == CAST_FROM_FN_PTR(address, object_reference_array_copy_post_call)
+        || call == CAST_FROM_FN_PTR(address, load_reference_call)
+        || call == CAST_FROM_FN_PTR(address, object_reference_clone_pre_call);
   }
 
   /// Full pre-barrier
@@ -180,6 +182,37 @@ public:
   private:
     typedef BarrierSet::AccessBarrier<decorators, BarrierSetT> Raw;
   public:
+    // Needed for weak references
+    static oop oop_load_in_heap_at(oop base, ptrdiff_t offset) {
+      oop value = Raw::oop_load_in_heap_at(base, offset);
+      const bool on_strong_oop_ref = (decorators & ON_STRONG_OOP_REF) != 0;
+      const bool peek              = (decorators & AS_NO_KEEPALIVE) != 0;
+      const bool needs_enqueue     = (!peek && !on_strong_oop_ref);
+      if (needs_enqueue && value != NULL) {
+        runtime()->load_reference(decorators, value);
+      }
+      return value;
+    }
+
+    template <typename T>
+    static oop oop_load_not_in_heap(T* addr) {
+      oop value = Raw::template oop_load<oop>(addr);
+      const bool on_strong_oop_ref = (decorators & ON_STRONG_OOP_REF) != 0;
+      const bool peek              = (decorators & AS_NO_KEEPALIVE) != 0;
+      const bool needs_enqueue     = (!peek && !on_strong_oop_ref);
+      if (needs_enqueue && value != NULL) {
+        runtime()->load_reference(decorators, value);
+      }
+      return value;
+    }
+
+    // Defensive: will catch weak oops at addresses in heap
+    template <typename T>
+    static oop oop_load_in_heap(T* addr) {
+      UNREACHABLE();
+      return NULL;
+    }
+
     template <typename T>
     static void oop_store_in_heap(T* addr, oop value) {
       UNREACHABLE();

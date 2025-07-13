@@ -2,7 +2,7 @@
 #include "mmtkSATBBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 
-#define SOFT_REFERENCE_LOAD_BARRIER false
+#define SOFT_REFERENCE_LOAD_BARRIER true
 
 constexpr int kUnloggedValue = 1;
 
@@ -12,8 +12,8 @@ static inline intptr_t side_metadata_base_address() {
 
 void MMTkSATBBarrierSetRuntime::load_reference(DecoratorSet decorators, oop value) const {
 #if SOFT_REFERENCE_LOAD_BARRIER
-  // if (CONCURRENT_MARKING_ACTIVE == 1 && value != NULL && mmtk_get_rc((void*) value) != 0)
-  //   ::mmtk_load_reference((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) value);
+  if (CONCURRENT_MARKING_ACTIVE == 1 && value != NULL)
+    ::mmtk_load_reference((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) value);
 #endif
 };
 
