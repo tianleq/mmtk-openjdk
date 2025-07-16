@@ -26,11 +26,11 @@ void MMTkSATBBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, o
 #if MMTK_ENABLE_BARRIER_FASTPATH
   // oop pre_val = *slot;
   // if (pre_val == NULL) return;
-  intptr_t addr = (intptr_t) (void*) src;
-  uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
-  intptr_t shift = (addr >> 3) & 0b111;
+  intptr_t addr = ((intptr_t) (void*) src);
+  const volatile uint8_t * meta_addr = (const volatile uint8_t *) (side_metadata_base_address() + (addr >> (UseCompressedOops ? 5 : 6)));
+  intptr_t shift = (addr >> (UseCompressedOops ? 2 : 3)) & 0b111;
   uint8_t byte_val = *meta_addr;
-  if (((byte_val >> shift) & 1) == 1) {
+  if (((byte_val >> shift) & 1) == kUnloggedValue) {
     object_reference_write_slow_call((void*) src, (void*) slot, (void*) target);
   }
 #else
@@ -385,7 +385,7 @@ void MMTkSATBBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, 
   Node* result = __ AndI(__ URShiftI(byte, shift), __ ConI(1));
   __ if_then(result, BoolTest::ne, zero, unlikely); {
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-
+    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), "mmtk_barrier_call", src, slot, val);
   } __ end_if();
   // if (!FIELD_BARRIER_NO_EAGER_BRANCH)
   //   __ end_if();
@@ -400,6 +400,7 @@ void MMTkSATBBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, 
 
   kit->final_sync(ideal); // Final sync IdealKit and GraphKit.
 }
+
 static void reference_load_barrier(GraphKit* kit, Node* slot, Node* val, bool emit_barrier) {
   MMTkIdealKit ideal(kit, true);
   Node* no_base = __ top();
