@@ -26,6 +26,7 @@
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
 #include "barriers/mmtkPublicObjectMarkingBarrier.hpp"
+#include "barriers/mmtkSATBBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
 #include "mmtkBarrierSetAssembler_x86.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
@@ -81,6 +82,7 @@ MMTkBarrierBase* get_selected_barrier() {
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
   else if (strcmp(barrier, "PublicObjectMarkingBarrier") == 0) selected_barrier = new MMTkPublicObjectMarkingBarrier();
+  else if (strcmp(barrier, "SATBBarrier") == 0) selected_barrier = new MMTkSATBBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }
@@ -157,3 +159,10 @@ void MMTkBarrierSetRuntime::object_reference_array_copy_slow_call(void* src, voi
   ::mmtk_object_array_copy_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
 
+void MMTkBarrierSetRuntime::load_reference_call(void* ref) {
+  ::mmtk_load_reference((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, ref);
+}
+
+void MMTkBarrierSetRuntime::object_reference_clone_pre_call(void* ref) {
+  ::mmtk_object_reference_clone_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, ref);
+}

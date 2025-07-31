@@ -152,6 +152,9 @@ pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
 pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
     mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
 
+#[no_mangle]
+pub static mut CONCURRENT_MARKING_ACTIVE: u8 = 0;
+
 #[derive(Default)]
 pub struct OpenJDK<const COMPRESSED: bool>;
 

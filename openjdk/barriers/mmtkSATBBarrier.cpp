@@ -1,57 +1,48 @@
 #define private public // too lazy to change openjdk... 
 
-
 #include "precompiled.hpp"
-#include "mmtkPublicObjectMarkingBarrier.hpp"
+#include "mmtkSATBBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
 
+#define SOFT_REFERENCE_LOAD_BARRIER true
 
-#define SOFT_REFERENCE_LOAD_BARRIER false
+constexpr int kUnloggedValue = 1;
 
-void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call(void* src, void* slot, void* target) {
-  // if target is null, nothing needs to be published
-  if (!target) return;
-  // Now check target/value, only go to slow-path when target is private/has not been published
-  intptr_t addr = (intptr_t) (void*) target;
-  uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
-  intptr_t shift = (addr >> 3) & 0b111;
-  uint8_t byte_val = *meta_addr;
-  if (((byte_val >> shift) & 1) != 1) {
-    MMTkBarrierSetRuntime::object_reference_write_slow_call(src, slot, target);
-  }
+static inline intptr_t side_metadata_base_address() {
+  return UseCompressedOops ? SATB_METADATA_BASE_ADDRESS : SATB_METADATA_BASE_ADDRESS;
 }
 
-void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
-#if MMTK_ENABLE_BARRIER_FASTPATH
-  intptr_t addr = (intptr_t) (void*) src;
-  uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
-  intptr_t shift = (addr >> 3) & 0b111;
-  uint8_t byte_val = *meta_addr;
-  if (((byte_val >> shift) & 1) == 1) {
-    MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call((void*) src, (void*) slot, (void*) target);
-  }
-#else
-  object_reference_write_pre_call((void*) src, (void*) slot, (void*) target);
-#endif
-}
-
-void MMTkPublicObjectMarkingBarrierSetRuntime::load_reference(DecoratorSet decorators, oop value) const {
+void MMTkSATBBarrierSetRuntime::load_reference(DecoratorSet decorators, oop value) const {
 #if SOFT_REFERENCE_LOAD_BARRIER
   if (CONCURRENT_MARKING_ACTIVE == 1 && value != NULL)
     ::mmtk_load_reference((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) value);
 #endif
 };
 
-void MMTkPublicObjectMarkingBarrierSetRuntime::object_probable_write(oop new_obj) const {
-  // The slow-call will do the unlog bit check again (same as the above fast-path check)
+void MMTkSATBBarrierSetRuntime::object_probable_write(oop new_obj) const {
+ // The slow-call will do the unlog bit check again (same as the above fast-path check)
   mmtk_object_probable_write((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) new_obj);
 }
 
+void MMTkSATBBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
+#if MMTK_ENABLE_BARRIER_FASTPATH
+  // oop pre_val = *slot;
+  // if (pre_val == NULL) return;
+  intptr_t addr = ((intptr_t) (void*) src);
+  const volatile uint8_t * meta_addr = (const volatile uint8_t *) (side_metadata_base_address() + (addr >> (UseCompressedOops ? 5 : 6)));
+  intptr_t shift = (addr >> (UseCompressedOops ? 2 : 3)) & 0b111;
+  uint8_t byte_val = *meta_addr;
+  if (((byte_val >> shift) & 1) == kUnloggedValue) {
+    object_reference_write_slow_call((void*) src, (void*) slot, (void*) target);
+  }
+#else
+  object_reference_write_pre_call((void*) src, (void*) slot, (void*) target);
+#endif
+}
 
 #define __ masm->
 
-
-void MMTkPublicObjectMarkingBarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register dst, Address src, Register tmp1, Register tmp_thread) {
+void MMTkSATBBarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register dst, Address src, Register tmp1, Register tmp_thread) {
   bool on_oop = type == T_OBJECT || type == T_ARRAY;
   bool on_weak = (decorators & ON_WEAK_OOP_REF) != 0;
   bool on_phantom = (decorators & ON_PHANTOM_OOP_REF) != 0;
@@ -81,108 +72,87 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::load_at(MacroAssembler* masm, D
 #endif
 }
 
-void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const {
-  if (can_remove_barrier(decorators, val, /* skip_const_null */ true)) return;
-  Register obj = dst.base();
-#if MMTK_ENABLE_BARRIER_FASTPATH
+void MMTkSATBBarrierSetAssembler::object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const {
+  if (can_remove_barrier(decorators, val, /* skip_const_null */ false)) return;
+
+  #if MMTK_ENABLE_BARRIER_FASTPATH
   Label done;
 
+  Register obj = dst.base();
   Register tmp3 = rscratch1;
   Register tmp4 = rscratch2;
-  assert_different_registers(obj, tmp2, tmp3);
-  assert_different_registers(tmp4, rcx);
-  __ pusha();
-  // tmp2 = load-byte (PUBLIC_BIT_BASE_ADDRESS + (obj >> 6));
+  Register tmp5 = tmp1 == dst.base() || tmp1 == dst.index() ? tmp2 : tmp1;
+
+  // tmp5 = load-byte (side_metadata_base_address() + (obj >> 6));
   __ movptr(tmp3, obj);
-  __ shrptr(tmp3, 6);
-  __ movptr(tmp2, PUBLIC_BIT_BASE_ADDRESS);
-  __ movb(tmp2, Address(tmp2, tmp3));
+  // __ load_heap_oop(tmp3, dst, noreg, noreg, AS_RAW);
+  // // Is the previous value null?
+  // __ cmpptr(tmp3, (int32_t) NULL_WORD);
+  // __ jcc(Assembler::equal, done);
+
+  __ shrptr(tmp3, UseCompressedOops ? 5 : 6);
+  __ movptr(tmp5, side_metadata_base_address());
+  __ movzbl(tmp5, Address(tmp5, tmp3));
+
   // tmp3 = (obj >> 3) & 7
-  __ movptr(tmp3, obj);
-  __ shrptr(tmp3, 3);
+  __ mov(tmp3, obj);
+  __ shrptr(tmp3, UseCompressedOops ? 2 : 3);
   __ andptr(tmp3, 7);
-  // tmp2 = tmp2 >> tmp3
+  // tmp5 = tmp5 >> tmp3
   __ movptr(tmp4, rcx);
   __ movl(rcx, tmp3);
-  __ shrptr(tmp2);
+  __ shrptr(tmp5);
   __ movptr(rcx, tmp4);
-  // if ((tmp2 & 1) == 1) goto slowpath; only go to slow path when src object is public
-  __ andptr(tmp2, 1);
-  __ cmpptr(tmp2, 1);
+  // if ((tmp5 & 1) == 1) goto slowpath;
+  __ andptr(tmp5, 1);
+  __ cmpptr(tmp5, kUnloggedValue);
   __ jcc(Assembler::notEqual, done);
 
-  __ movptr(c_rarg0, obj);
+  // TODO: Spill fewer registers
+  __ pusha();
+  __ movptr(c_rarg0, dst.base());
   __ lea(c_rarg1, dst);
   __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
-  __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
-  __ bind(done);
+  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
   __ popa();
+
+  __ bind(done);
 #else
   __ pusha();
-  __ movptr(c_rarg0, obj);
+  __ movptr(c_rarg0, dst.base());
   __ lea(c_rarg1, dst);
-  // __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
-  __ movptr(c_rarg2, val);
+  __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
   __ popa();
 #endif
 }
 
-
-void MMTkPublicObjectMarkingBarrierSetAssembler::oop_arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, 
-                                                                        Register src_oop, Register dst_oop, Register src, Register dst, Register count) {
+void MMTkSATBBarrierSetAssembler::arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, Register src, Register dst, Register count) {
   // `count` or `dst` register values may get overwritten after the array copy, and `arraycopy_epilogue` can receive invalid addresses.
   // Save the register values here and restore them in `arraycopy_epilogue`.
   // See https://github.com/openjdk/jdk/blob/jdk-11%2B19/src/hotspot/cpu/x86/gc/shared/modRefBarrierSetAssembler_x86.cpp#L37-L50
 
-  bool checkcast = (decorators & ARRAYCOPY_CHECKCAST) != 0;
-  bool disjoint = (decorators & ARRAYCOPY_DISJOINT) != 0;
-  bool obj_int = type == T_OBJECT LP64_ONLY(&& UseCompressedOops);
-
   if (type == T_OBJECT || type == T_ARRAY) {
-
-  assert(src_oop == rscratch1, "src oop is not in r10");
-  assert(dst_oop == rscratch2, "dst oop is not in r11");
-  assert(src == c_rarg0, "src oop is not in rdi");
-  assert(dst == c_rarg1, "dst oop is not in rsi");
-  assert(count == c_rarg2, "dst oop is not in rdx");
-  // No epilogue is needed, so skip the save
-
-// #ifdef _LP64
-//     if (!checkcast) {
-//       if (!obj_int) {
-//         // Save count for barrier
-//         __ movptr(r11, count);
-//       } else if (disjoint) {
-//         // Save dst in r11 in the disjoint case
-//         __ movq(r11, dst);
-//       }
-//     }
-// #else
-//     if (disjoint) {
-//       __ mov(rdx, dst);          // save 'to'
-//     }
-// #endif
-    // saving all regs is necessary as this prologue does not have its own frame
-    // it has to make sure no registers get killed
+    Label done;
+    // // Bailout if count is zero
+    __ cmpptr(count, 0);
+    __ jcc(Assembler::equal, done);
     __ pusha();
     __ movptr(c_rarg0, src);
     __ movptr(c_rarg1, dst);
     __ movptr(c_rarg2, count);
-    __ movptr(c_rarg3, src_oop);
-    __ movptr(c_rarg4, dst_oop);
-    __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_array_copy_pre_call), 5);
+    __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_array_copy_pre_call), 3);
     __ popa();
+    __ bind(done);
   }
 }
 
 #undef __
 
 #define __ sasm->
-void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const {
-  __ prologue("mmtk_write_barrier", false);
 
-  Address store_addr(rbp, 4*BytesPerWord);
+void MMTkSATBBarrierSetAssembler::generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const {
+  __ prologue("mmtk_satb_barrier", false);
 
   Label done, runtime;
 
@@ -200,7 +170,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_r
   __ save_live_registers_no_oop_map(true);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
-  __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
+  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
 #else
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
 #endif
@@ -219,7 +189,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_r
 #undef __
 #define __ ce->masm()->
 
-void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_stub(LIR_Assembler* ce, MMTkC1PreBarrierStub* stub) const {
+void MMTkSATBBarrierSetAssembler::generate_c1_pre_write_barrier_stub(LIR_Assembler* ce, MMTkC1PreBarrierStub* stub) const {
   MMTkBarrierSetC1* bs = (MMTkBarrierSetC1*) BarrierSet::barrier_set()->barrier_set_c1();
   __ bind(*stub->entry());
 
@@ -259,7 +229,8 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_s
 #define __ gen->lir()->
 #endif
 
-void MMTkPublicObjectMarkingBarrierSetC1::load_at_resolved(LIRAccess& access, LIR_Opr result) {
+
+void MMTkSATBBarrierSetC1::load_at_resolved(LIRAccess& access, LIR_Opr result) {
   DecoratorSet decorators = access.decorators();
   bool is_weak = (decorators & ON_WEAK_OOP_REF) != 0;
   bool is_phantom = (decorators & ON_PHANTOM_OOP_REF) != 0;
@@ -296,11 +267,10 @@ void MMTkPublicObjectMarkingBarrierSetC1::load_at_resolved(LIRAccess& access, LI
 #endif
 }
 
-void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo *info) const {
-
+void MMTkSATBBarrierSetC1::object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo* info) const {
   LIRGenerator* gen = access.gen();
   DecoratorSet decorators = access.decorators();
-  if ((decorators & IN_HEAP) == 0) return;
+  if ((decorators & IN_HEAP) == 0) return; // Not sure if this line is sound
   bool needs_patching = (decorators & C1_NEEDS_PATCHING) != 0;
   if (!src->is_register()) {
     LIR_Opr reg = gen->new_pointer_register();
@@ -311,6 +281,8 @@ void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& 
     }
     src = reg;
   }
+  assert(src->is_register(), "must be a register at this point");
+
   if (!slot->is_register() && !needs_patching) {
     LIR_Address* address = slot->as_address_ptr();
     LIR_Opr ptr = gen->new_pointer_register();
@@ -340,27 +312,35 @@ void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& 
   if (needs_patching) slow->scratch = gen->new_register(T_OBJECT);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
- if (needs_patching) {
+  if (needs_patching) {
     // At this stage, slot address is not available, so cannot do the fast-path check until 
     // its address get resolved
     // FIXME: Jump to a medium-path for code patching without entering slow-path
     __ jump(slow);
   } else {
+    // // load pre_val 
+    // LIR_Address* slot_addr = new LIR_Address(slot, T_OBJECT);
+    // LIR_Opr addr = slot;
+    // __ load(slot_addr, addr);
+    // // if pre_val == NULL skip the barrier
+    // __ cmp(lir_cond_equal, addr, LIR_OprFact::oopConst(NULL));
+    // __ branch(lir_cond_equal, T_OBJECT, slow->continuation());
     LIR_Opr addr = src;
-    // uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
+    // uint8_t* meta_addr = (uint8_t*) (side_metadata_base_address() + (addr >> 6));
     LIR_Opr offset = gen->new_pointer_register();
     __ move(addr, offset);
-    __ unsigned_shift_right(offset, 6, offset);
+    __ unsigned_shift_right(offset, UseCompressedOops ? 5 : 6, offset);
     LIR_Opr base = gen->new_pointer_register();
-    __ move(LIR_OprFact::longConst(PUBLIC_BIT_BASE_ADDRESS), base);
+    __ move(LIR_OprFact::longConst(side_metadata_base_address()), base);
     LIR_Address* meta_addr = new LIR_Address(base, offset, T_BYTE);
     // uint8_t byte_val = *meta_addr;
     LIR_Opr byte_val = gen->new_register(T_INT);
     __ move(meta_addr, byte_val);
+   
     // intptr_t shift = (addr >> 3) & 0b111;
     LIR_Opr shift = gen->new_register(T_INT);
     __ move(addr, shift);
-    __ unsigned_shift_right(shift, 3, shift);
+    __ unsigned_shift_right(shift, UseCompressedOops ? 2 : 3, shift);
     __ logical_and(shift, LIR_OprFact::intConst(0b111), shift);
     // if (((byte_val >> shift) & 1) == 1) slow;
     LIR_Opr result = byte_val;
@@ -380,39 +360,34 @@ void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& 
 
 #define __ ideal.
 
-// The only case that the barrier can be skiped is that the target is null
-bool MMTkPublicObjectMarkingBarrierSetC2::can_remove_barrier(GraphKit* kit, PhaseTransform* phase, Node* src, Node* slot, Node* val, bool skip_const_null) const {
-  // Skip barrier if the new target is a null pointer.
-  if (skip_const_null && val != NULL && val->is_Con() && val->bottom_type() == TypePtr::NULL_PTR) {
-    return true;
-  }
-  return false;
-}
-
-void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const {
-  if (can_remove_barrier(kit, &kit->gvn(), src, slot, val, /* skip_const_null */ true)) return;
+void MMTkSATBBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const {
+  if (can_remove_barrier(kit, &kit->gvn(), src, slot, val, /* skip_const_null */ false)) return;
 
   MMTkIdealKit ideal(kit, true);
 
 #if MMTK_ENABLE_BARRIER_FASTPATH
   Node* no_base = __ top();
-  float unlikely  = PROB_UNLIKELY(0.95);
+  float unlikely  = PROB_UNLIKELY(0.999);
 
   Node* zero  = __ ConI(0);
   Node* addr = __ CastPX(__ ctrl(), src);
-  Node* meta_addr = __ AddP(no_base, __ ConP(PUBLIC_BIT_BASE_ADDRESS), __ URShiftX(addr, __ ConI(6)));
+  Node* meta_addr = __ AddP(no_base, __ ConP(side_metadata_base_address()), __ URShiftX(addr, __ ConI(UseCompressedOops ? 5 : 6)));
   Node* byte = __ load(__ ctrl(), meta_addr, TypeInt::INT, T_BYTE, Compile::AliasIdxRaw);
-  Node* shift = __ URShiftX(addr, __ ConI(3));
+
+  Node* shift = __ URShiftX(addr, __ ConI(UseCompressedOops ? 2 : 3));
   shift = __ AndI(__ ConvL2I(shift), __ ConI(7));
   Node* result = __ AndI(__ URShiftI(byte, shift), __ ConI(1));
-
   __ if_then(result, BoolTest::ne, zero, unlikely); {
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "mmtk_barrier_call", src, slot, val);
+    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), "mmtk_barrier_call", src, slot, val);
   } __ end_if();
 #else
   const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
   Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), "mmtk_barrier_call", src, slot, val);
+  // Looks like this is necessary
+  // See https://github.com/mmtk/openjdk/blob/c82e5c44adced4383162826c2c3933a83cfb139b/src/hotspot/share/gc/shenandoah/c2/shenandoahBarrierSetC2.cpp#L288-L291
+  Node* call = __ ctrl()->in(0);
+  call->add_req(slot);
 #endif
 
   kit->final_sync(ideal); // Final sync IdealKit and GraphKit.
@@ -511,7 +486,7 @@ static void reference_load_barrier_for_unknown_load(GraphKit* kit, Node* base_oo
   kit->final_sync(ideal);
 }
 
-Node* MMTkPublicObjectMarkingBarrierSetC2::load_at_resolved(C2Access& access, const Type* val_type) const {
+Node* MMTkSATBBarrierSetC2::load_at_resolved(C2Access& access, const Type* val_type) const {
 
   DecoratorSet decorators = access.decorators();
   GraphKit* kit = access.kit();
@@ -552,7 +527,10 @@ Node* MMTkPublicObjectMarkingBarrierSetC2::load_at_resolved(C2Access& access, co
   return load;
 }
 
-void MMTkPublicObjectMarkingBarrierSetC2::clone(GraphKit* kit, Node* src, Node* dst, Node* size, bool is_array) const {
+void MMTkSATBBarrierSetC2::clone(GraphKit* kit, Node* src, Node* dst, Node* size, bool is_array) const {
   BarrierSetC2::clone(kit, src, dst, size, is_array);
 }
+
+
+
 #undef __

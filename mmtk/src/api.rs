@@ -404,6 +404,19 @@ pub extern "C" fn executable() -> bool {
     true
 }
 
+#[no_mangle]
+pub extern "C" fn mmtk_load_reference(mutator: *mut libc::c_void, o: ObjectReference) {
+    with_mutator!(|mutator| mutator.barrier().load_reference(o))
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_clone_pre(
+    mutator: *mut libc::c_void,
+    obj: ObjectReference,
+) {
+    with_mutator!(|mutator| mutator.barrier().object_reference_clone_pre(obj))
+}
+
 /// Full pre barrier
 #[no_mangle]
 pub extern "C" fn mmtk_object_reference_write_pre(
@@ -476,9 +489,6 @@ pub extern "C" fn mmtk_object_array_copy_pre(
             (dst..dst + bytes).into(),
         );
     })
-    // mutator
-    //     .barrier()
-    //     .object_array_copy_pre(src_base, dst_base, src..src + bytes, dst..dst + bytes);
 }
 
 /// Object Array-copy slow-path call
@@ -501,13 +511,6 @@ pub extern "C" fn mmtk_object_array_copy_slow(
             (dst..dst + bytes).into(),
         );
     })
-
-    // mutator.barrier().object_array_copy_slow(
-    //     src_base,
-    //     dst_base,
-    //     src..src + bytes,
-    //     dst..dst + bytes,
-    // );
 }
 
 /// Array-copy pre-barrier

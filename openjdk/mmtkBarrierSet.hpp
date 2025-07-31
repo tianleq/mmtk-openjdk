@@ -60,6 +60,8 @@ MMTkAllocatorOffsets get_tlab_top_and_end_offsets(AllocatorSelector selector);
 
 class MMTkBarrierSetRuntime: public CHeapObj<mtGC> {
 public:
+  /// Weak ref load barrier
+  static void load_reference_call(void* ref);
   /// Generic pre-write barrier. Called by fast-paths.
   static void object_reference_write_pre_call(void* src, void* slot, void* target);
   /// Generic post-write barrier. Called by fast-paths.
@@ -74,7 +76,7 @@ public:
   static void object_reference_array_copy_post_call(void* src, void* dst, size_t count);
   /// Generic slow-paht. Called by fast-path.
   static void object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base);
-
+  static void object_reference_clone_pre_call(void* obj);
   /// Check if the address is a slow-path function.
   virtual bool is_slow_path_call(address call) const {
     return call == CAST_FROM_FN_PTR(address, object_reference_write_pre_call)
@@ -98,6 +100,10 @@ public:
   /// Deoptimization can happen after C2 slowpath allocation, and the newly allocated object can be promoted.
   /// So this callback is requierd for any generational collectors.
   virtual void object_probable_write(oop new_obj) const {};
+  /// java.lang.Reference load barrier
+  virtual void load_reference(DecoratorSet decorators, oop value) const {};
+  /// Object clone pre-barrier
+  virtual void clone_pre(DecoratorSet decorators, oop value) const {};
 };
 
 class MMTkBarrierC1;
@@ -180,6 +186,37 @@ public:
   private:
     typedef BarrierSet::AccessBarrier<decorators, BarrierSetT> Raw;
   public:
+    // Needed for weak references
+    static oop oop_load_in_heap_at(oop base, ptrdiff_t offset) {
+      oop value = Raw::oop_load_in_heap_at(base, offset);
+      const bool on_strong_oop_ref = (decorators & ON_STRONG_OOP_REF) != 0;
+      const bool peek              = (decorators & AS_NO_KEEPALIVE) != 0;
+      const bool needs_enqueue     = (!peek && !on_strong_oop_ref);
+      if (needs_enqueue && value != NULL) {
+        runtime()->load_reference(decorators, value);
+      }
+      return value;
+    }
+
+    template <typename T>
+    static oop oop_load_not_in_heap(T* addr) {
+      oop value = Raw::template oop_load<oop>(addr);
+      const bool on_strong_oop_ref = (decorators & ON_STRONG_OOP_REF) != 0;
+      const bool peek              = (decorators & AS_NO_KEEPALIVE) != 0;
+      const bool needs_enqueue     = (!peek && !on_strong_oop_ref);
+      if (needs_enqueue && value != NULL) {
+        runtime()->load_reference(decorators, value);
+      }
+      return value;
+    }
+
+    // Defensive: will catch weak oops at addresses in heap
+    template <typename T>
+    static oop oop_load_in_heap(T* addr) {
+      UNREACHABLE();
+      return NULL;
+    }
+
     template <typename T>
     static void oop_store_in_heap(T* addr, oop value) {
       UNREACHABLE();
