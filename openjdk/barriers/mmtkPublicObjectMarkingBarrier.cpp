@@ -199,12 +199,14 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::generate_c1_pre_write_barrier_r
 
   __ save_live_registers_no_oop_map(true);
 
-#if MMTK_ENABLE_BARRIER_FASTPATH
-  __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
-#else
-  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
-#endif
+// #if MMTK_ENABLE_BARRIER_FASTPATH
+//   __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
+// #else
+//   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
+// #endif
 
+  // cannot go to the mid call because when code needs patch, src object has not been checked yet
+  __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
   __ restore_live_registers(true);
 
   __ bind(done);
