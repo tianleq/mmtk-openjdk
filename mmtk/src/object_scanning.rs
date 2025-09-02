@@ -29,9 +29,9 @@ impl OopIterate for OopMapBlock {
         let _source = ObjectReference::from(oop);
         for i in 0..self.count as usize {
             let slot = (start + (i << log_bytes_in_oop)).into();
-            #[cfg(not(feature = "debug_publish_object"))]
-            closure.visit_slot(slot);
-            #[cfg(feature = "debug_publish_object")]
+            // #[cfg(not(feature = "debug_publish_object"))]
+            // closure.visit_slot(slot);
+            // #[cfg(feature = "debug_publish_object")]
             closure.visit_slot(_source, slot);
         }
     }
@@ -57,7 +57,6 @@ impl OopIterate for InstanceMirrorKlass {
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
         self.instance_klass.oop_iterate::<COMPRESSED>(oop, closure);
-        #[cfg(feature = "debug_publish_object")]
         let _source = ObjectReference::from(oop);
         // static fields
         let start = Self::start_of_static_fields(oop);
@@ -66,9 +65,9 @@ impl OopIterate for InstanceMirrorKlass {
             let start: *const NarrowOop = start.to_ptr::<NarrowOop>();
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
             for narrow_oop in slice {
-                #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_slot(narrow_oop.slot().into());
-                #[cfg(feature = "debug_publish_object")]
+                // #[cfg(not(feature = "debug_publish_object"))]
+                // closure.visit_slot(narrow_oop.slot().into());
+                // #[cfg(feature = "debug_publish_object")]
                 closure.visit_slot(_source, narrow_oop.slot().into());
             }
         } else {
@@ -76,9 +75,9 @@ impl OopIterate for InstanceMirrorKlass {
             let slice = unsafe { slice::from_raw_parts(start, len as _) };
 
             for oop in slice {
-                #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_slot(Address::from_ref(oop as &Oop).into());
-                #[cfg(feature = "debug_publish_object")]
+                // #[cfg(not(feature = "debug_publish_object"))]
+                // closure.visit_slot(Address::from_ref(oop as &Oop).into());
+                // #[cfg(feature = "debug_publish_object")]
                 closure.visit_slot(_source, Address::from_ref(oop as &Oop).into());
             }
         }
@@ -102,20 +101,19 @@ impl OopIterate for ObjArrayKlass {
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
         let array = unsafe { oop.as_array_oop() };
-        #[cfg(feature = "debug_publish_object")]
         let _source = ObjectReference::from(oop);
         if COMPRESSED {
             for narrow_oop in unsafe { array.data::<NarrowOop, COMPRESSED>(BasicType::T_OBJECT) } {
-                #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_slot(narrow_oop.slot().into());
-                #[cfg(feature = "debug_publish_object")]
+                // #[cfg(not(feature = "debug_publish_object"))]
+                // closure.visit_slot(narrow_oop.slot().into());
+                // #[cfg(feature = "debug_publish_object")]
                 closure.visit_slot(_source, narrow_oop.slot().into());
             }
         } else {
             for oop in unsafe { array.data::<Oop, COMPRESSED>(BasicType::T_OBJECT) } {
-                #[cfg(not(feature = "debug_publish_object"))]
-                closure.visit_slot(Address::from_ref(oop as &Oop).into());
-                #[cfg(feature = "debug_publish_object")]
+                // #[cfg(not(feature = "debug_publish_object"))]
+                // closure.visit_slot(Address::from_ref(oop as &Oop).into());
+                // #[cfg(feature = "debug_publish_object")]
                 closure.visit_slot(_source, Address::from_ref(oop as &Oop).into());
             }
         }
@@ -174,18 +172,17 @@ impl InstanceRefKlass {
         oop: Oop,
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
-        #[cfg(feature = "debug_publish_object")]
         let _source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address::<COMPRESSED>(oop);
-        #[cfg(not(feature = "debug_publish_object"))]
-        closure.visit_slot(referent_addr);
-        #[cfg(feature = "debug_publish_object")]
+        // #[cfg(not(feature = "debug_publish_object"))]
+        // closure.visit_slot(referent_addr);
+        // #[cfg(feature = "debug_publish_object")]
         closure.visit_slot(_source, referent_addr);
 
         let discovered_addr = Self::discovered_address::<COMPRESSED>(oop);
-        #[cfg(not(feature = "debug_publish_object"))]
-        closure.visit_slot(discovered_addr);
-        #[cfg(feature = "debug_publish_object")]
+        // #[cfg(not(feature = "debug_publish_object"))]
+        // closure.visit_slot(discovered_addr);
+        // #[cfg(feature = "debug_publish_object")]
         closure.visit_slot(_source, discovered_addr);
     }
 }
@@ -256,10 +253,12 @@ pub unsafe extern "C" fn scan_object_fn<
 ) {
     let ptr: *mut u8 = CLOSURE.with(|x| *x.get());
     let closure = &mut *(ptr as *mut V);
-    #[cfg(feature = "debug_publish_object")]
+    // #[cfg(feature = "debug_publish_object")]
     closure.visit_slot(slot.load(), slot.into());
-    #[cfg(not(feature = "debug_publish_object"))]
-    closure.visit_slot(slot.into());
+    // #[cfg(not(feature = "debug_publish_object"))]
+    // closure.visit_slot(slot.into());
+    // not being used at the moment
+    panic!("should not reach here");
 }
 
 pub fn scan_object<const COMPRESSED: bool>(

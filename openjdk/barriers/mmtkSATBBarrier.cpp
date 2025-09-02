@@ -1,3 +1,4 @@
+#include "register_x86.hpp"
 #define private public // too lazy to change openjdk... 
 
 #include "precompiled.hpp"
@@ -112,7 +113,12 @@ void MMTkSATBBarrierSetAssembler::object_reference_write_pre(MacroAssembler* mas
   __ pusha();
   __ movptr(c_rarg0, dst.base());
   __ lea(c_rarg1, dst);
-  __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  if (val == noreg) {
+    __ movptr(c_rarg2, (int32_t) NULL_WORD);
+  } else {
+    __ movptr(c_rarg2, val);
+  }
+
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
   __ popa();
 
@@ -121,7 +127,11 @@ void MMTkSATBBarrierSetAssembler::object_reference_write_pre(MacroAssembler* mas
   __ pusha();
   __ movptr(c_rarg0, dst.base());
   __ lea(c_rarg1, dst);
-  __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  if (val == noreg) {
+    __ movptr(c_rarg2, (int32_t) NULL_WORD);
+  } else {
+    __ movptr(c_rarg2, val);
+  }
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
   __ popa();
 #endif

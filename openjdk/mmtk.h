@@ -258,11 +258,11 @@ extern bool mmtk_is_object_published(void *object);
   extern void mmtk_publish_object(JavaThread* thread, void *object);
   extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
 #else
-  extern void mmtk_set_public_bit(void *object);
-  extern void mmtk_publish_object(void *object);
-  extern void mmtk_publish_object_with_fence(void *object);
-  extern void mmtk_publish_runtime_object(void *object);
-  extern void mmtk_publish_runtime_object_with_fence(void *object);
+  extern void mmtk_set_public_bit(void *thread, void *object);
+  extern void mmtk_publish_object(void *thread,  void *object);
+  extern void mmtk_publish_object_with_fence(void *thread, void *object);
+  extern void mmtk_publish_runtime_object(void *thread, void *object);
+  extern void mmtk_publish_runtime_object_with_fence(void *thread, void *object);
 #endif
 
 #endif

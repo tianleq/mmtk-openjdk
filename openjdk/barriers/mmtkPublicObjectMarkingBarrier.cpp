@@ -1,3 +1,4 @@
+#include "register_x86.hpp"
 #define private public // too lazy to change openjdk... 
 
 
@@ -82,7 +83,7 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::load_at(MacroAssembler* masm, D
 }
 
 void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const {
-  if (can_remove_barrier(decorators, val, /* skip_const_null */ true)) return;
+  if (can_remove_barrier(decorators, val, /* skip_const_null */ false)) return;
   Register obj = dst.base();
 #if MMTK_ENABLE_BARRIER_FASTPATH
   Label done;
@@ -113,7 +114,12 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
 
   __ movptr(c_rarg0, obj);
   __ lea(c_rarg1, dst);
-  __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  if (val == noreg) {
+    __ movptr(c_rarg2,  (int32_t) NULL_WORD);
+  } else {
+    __ movptr(c_rarg2, val);
+  }
+
   __ call_VM_leaf_base(FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), 3);
   __ bind(done);
   __ popa();
@@ -121,7 +127,11 @@ void MMTkPublicObjectMarkingBarrierSetAssembler::object_reference_write_pre(Macr
   __ pusha();
   __ movptr(c_rarg0, obj);
   __ lea(c_rarg1, dst);
-  // __ movptr(c_rarg2, val == noreg ?  (int32_t) NULL_WORD : val);
+  if (val == noreg) {
+    __ movptr(c_rarg2,  (int32_t) NULL_WORD);
+  } else {
+    __ movptr(c_rarg2, val);
+  }
   __ movptr(c_rarg2, val);
   __ call_VM_leaf_base(FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
   __ popa();
@@ -392,7 +402,7 @@ bool MMTkPublicObjectMarkingBarrierSetC2::can_remove_barrier(GraphKit* kit, Phas
 }
 
 void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* kit, Node* src, Node* slot, Node* val) const {
-  if (can_remove_barrier(kit, &kit->gvn(), src, slot, val, /* skip_const_null */ true)) return;
+  if (can_remove_barrier(kit, &kit->gvn(), src, slot, val, /* skip_const_null */ false)) return;
 
   MMTkIdealKit ideal(kit, true);
 

@@ -87,7 +87,7 @@ MMTkC1PreBarrierStub(LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo* i
   virtual void visit(LIR_OpVisitState* visitor) override {
     if (info != NULL)
         visitor->do_slow_case(info);
-      else
+    else
         visitor->do_slow_case();
     if (src != NULL) visitor->do_input(src);
     if (slot != NULL) visitor->do_input(slot);
