@@ -45,9 +45,9 @@ endif
 
 ifeq ($(THREAD_LOCAL_GC), 2)
   ifndef GC_FEATURES
-    GC_FEATURES=--features thread_local_gc_copying
+    GC_FEATURES=--features thread_local_gc_copying,object_pinning
   else
-    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying"
+    GC_FEATURES:=$(strip $(GC_FEATURES))",thread_local_gc_copying,object_pinning"
   endif
 endif
 

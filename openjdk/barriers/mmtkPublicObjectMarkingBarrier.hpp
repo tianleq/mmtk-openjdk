@@ -19,6 +19,12 @@ class MMTkPublicObjectMarkingBarrierSetRuntime: public MMTkBarrierSetRuntime {
 public:
   /// Generic mid-path. Called by fast-paths.
   static void object_reference_write_mid_call(void* src, void* slot, void* target);
+  /// Publication mid-path. Called by fast-paths.
+  static void object_reference_write_publication_mid_call(void* src, void* slot, void* target);
+  /// Remset mid-path. Called by fast-paths.
+  static void object_reference_write_remset_mid_call(void* src, void* slot, void* target);
+  /// Remset mid-path. Called by fast-paths.
+  static void object_reference_write_imprecise_mid_call(void* src, void* slot, void* target);
   // Interfaces called by `MMTkBarrierSet::AccessBarrier`
   virtual void object_reference_write_pre(oop src, oop* slot, oop target) const override;
 
@@ -34,7 +40,7 @@ public:
 class MMTkPublicObjectMarkingBarrierSetAssembler: public MMTkBarrierSetAssembler {
 protected:
   virtual void object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const override;
-  virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const override;
+  virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm, bool precise = true) const override;
 public:
   virtual void oop_arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, 
                                       Register src_oop, Register dst_oop, Register src, Register dst, Register count) override;

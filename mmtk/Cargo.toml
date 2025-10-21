@@ -57,6 +57,8 @@ extra_header = ["mmtk/extra_header"]
 
 public_bit = ["mmtk/public_bit"]
 debug_publish_object = ["mmtk/debug_publish_object", "public_bit"]
+object_pinning = ["mmtk/object_pinning"]
+
 #Enable thread local gc
 thread_local_gc = ["mmtk/thread_local_gc", "public_bit"]
 
@@ -64,7 +66,7 @@ thread_local_gc = ["mmtk/thread_local_gc", "public_bit"]
 thread_local_gc_ibm_style = ["mmtk/thread_local_gc_ibm_style", "thread_local_gc"]
 
 #Enable thread local gc
-thread_local_gc_copying = ["mmtk/thread_local_gc_copying", "thread_local_gc"]
+thread_local_gc_copying = ["mmtk/thread_local_gc_copying", "thread_local_gc", "object_pinning"]
 
 debug_thread_local_gc_copying = ["mmtk/debug_thread_local_gc_copying", "thread_local_gc", "thread_local_gc_copying"]
 

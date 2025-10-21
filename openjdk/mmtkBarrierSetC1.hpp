@@ -11,6 +11,7 @@ class MMTkBarrierSetC1 : public BarrierSetC1 {
 
 protected:
   CodeBlob* _pre_barrier_c1_runtime_code_blob;
+  CodeBlob* _pre_barrier_imprecise_c1_runtime_code_blob;
   CodeBlob* _post_barrier_c1_runtime_code_blob;
   CodeBlob* _ref_load_barrier_c1_runtime_code_blob;
 
@@ -62,9 +63,12 @@ public:
 
   MMTkBarrierSetC1()
     : _pre_barrier_c1_runtime_code_blob(NULL),
-      _post_barrier_c1_runtime_code_blob(NULL) {}
+      _pre_barrier_imprecise_c1_runtime_code_blob(NULL),
+      _post_barrier_c1_runtime_code_blob(NULL),
+      _ref_load_barrier_c1_runtime_code_blob(NULL) {}
 
   CodeBlob* pre_barrier_c1_runtime_code_blob() { return _pre_barrier_c1_runtime_code_blob; }
+  CodeBlob* pre_barrier_imprecise_c1_runtime_code_blob() { return _pre_barrier_imprecise_c1_runtime_code_blob; }
   CodeBlob* post_barrier_c1_runtime_code_blob() { return _post_barrier_c1_runtime_code_blob; }
 
   /// Generate C1 write barrier slow-call C1-LIR code

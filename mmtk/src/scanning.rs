@@ -96,11 +96,11 @@ pub(crate) fn to_slots_closure<S: Slot, F: RootsWorkFactory<S>>(factory: &mut F)
 }
 
 #[cfg(feature = "thread_local_gc")]
-pub(crate) fn to_thread_local_graph_traversal_closure<E: Slot, F: ObjectGraphTraversal<E>>(
+pub(crate) fn to_thread_local_graph_traversal_closure<S: Slot, F: ObjectGraphTraversal<S>>(
     graph_traversal_func: &mut F,
 ) -> SlotsClosure {
     SlotsClosure {
-        func: traverse_thread_local_object_graph::<E, F>,
+        func: traverse_thread_local_object_graph::<S, F>,
         data: graph_traversal_func as *mut F as *mut libc::c_void,
     }
 }

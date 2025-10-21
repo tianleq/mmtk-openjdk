@@ -68,6 +68,9 @@ public:
   static void object_reference_write_post_call(void* src, void* slot, void* target);
   /// Generic slow-path. Called by fast-paths.
   static void object_reference_write_slow_call(void* src, void* slot, void* target);
+  /// Generic slow-path. Called by fast-paths.
+  static void object_reference_write_generic_slow_call(void* src, void* slot, void* target, int semantic);
+  static void object_reference_write_pre_call_imprecise(void* src, void* slot, void* target);
   /// Generic arraycopy pre-barrier. Called by fast-paths.
   // static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
   /// Generic arraycopy pre-barrier. Called by fast-paths.

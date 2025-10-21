@@ -161,7 +161,7 @@ void MMTkSATBBarrierSetAssembler::arraycopy_prologue(MacroAssembler* masm, Decor
 
 #define __ sasm->
 
-void MMTkSATBBarrierSetAssembler::generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const {
+void MMTkSATBBarrierSetAssembler::generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm, bool precise) const {
   __ prologue("mmtk_satb_barrier", false);
 
   Label done, runtime;

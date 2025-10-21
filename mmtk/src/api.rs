@@ -462,6 +462,38 @@ pub extern "C" fn mmtk_object_reference_write_slow(
     })
 }
 
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_write_slow_generic(
+    mutator: *mut libc::c_void,
+    src: ObjectReference,
+    slot: Address,
+    target: NullableObjectReference,
+    semantic: i32,
+) {
+    with_mutator!(|mutator| {
+        mutator.barrier().object_reference_write_slow_generic(
+            src,
+            slot.into(),
+            target.into(),
+            semantic,
+        );
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_write_pre_imprecise(
+    mutator: *mut libc::c_void,
+    src: ObjectReference,
+    slot: Address,
+    target: NullableObjectReference,
+) {
+    with_mutator!(|mutator| {
+        mutator
+            .barrier()
+            .object_reference_write_pre_imprecise(src, slot.into(), target.into());
+    })
+}
+
 fn log_bytes_in_slot() -> usize {
     if crate::use_compressed_oops() {
         OpenJDKSlot::<true>::LOG_BYTES_IN_SLOT

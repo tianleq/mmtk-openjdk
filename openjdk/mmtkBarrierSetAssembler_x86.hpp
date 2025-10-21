@@ -30,7 +30,7 @@ protected:
   }
 
   /// Generate C1 pre write barrier slow-call assembly code
-  virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm) const {};
+  virtual void generate_c1_pre_write_barrier_runtime_stub(StubAssembler* sasm, bool precise = true) const {};
   /// Generate C1 post write barrier slow-call assembly code
   virtual void generate_c1_post_write_barrier_runtime_stub(StubAssembler* sasm) const {};
   virtual void generate_c1_ref_load_barrier_runtime_stub(StubAssembler* sasm) const;
