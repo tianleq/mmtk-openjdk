@@ -150,6 +150,7 @@ struct MMTkMutatorContext {
   size_t local_allocation_size;
   void *slot_remset;
   void *object_remset;
+  void *stack_slots;
 #endif
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
