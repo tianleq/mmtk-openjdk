@@ -272,7 +272,7 @@ public:
     }
 
     static void clone_in_heap(oop src, oop dst, size_t size) {
-      // TODO: We don't need clone barriers at the moment.
+      runtime()->clone_pre(decorators, dst);
       Raw::clone(src, dst, size);
     }
   };

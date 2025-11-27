@@ -1,3 +1,4 @@
+#include "mmtkBarrierSet.hpp"
 #include "register_x86.hpp"
 #include <fcntl.h>
 #define private public // too lazy to change openjdk... 
@@ -91,6 +92,13 @@ void MMTkPublicObjectMarkingBarrierSetRuntime::load_reference(DecoratorSet decor
 void MMTkPublicObjectMarkingBarrierSetRuntime::object_probable_write(oop new_obj) const {
   // The slow-call will do the unlog bit check again (same as the above fast-path check)
   mmtk_object_probable_write((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) new_obj);
+}
+
+void MMTkPublicObjectMarkingBarrierSetRuntime::clone_pre(DecoratorSet decorators, oop dst) const {
+  // By definiton, dst is always private. Regardless of src status, all dst's slots need to be remembered
+  // becase a private src might have public children and thus cloning creates new private --> public 
+  MMTkBarrierSetRuntime::object_reference_clone_pre_call(dst);
+  
 }
 
 
