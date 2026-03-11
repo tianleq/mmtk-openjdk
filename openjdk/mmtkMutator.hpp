@@ -152,6 +152,11 @@ struct MMTkMutatorContext {
   void *object_remset;
   void *stack_slots;
 #endif
+  size_t allocation_bytes;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
+  uint8_t state;
+#endif
+
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 
