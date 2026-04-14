@@ -149,6 +149,9 @@ pub static FREE_LIST_ALLOCATOR_SIZE: uintptr_t =
     std::mem::size_of::<mmtk::util::alloc::FreeListAllocator<OpenJDK<false>>>();
 
 #[no_mangle]
+pub static mut CONCURRENT_MARKING_ACTIVE: u8 = 0;
+
+#[no_mangle]
 pub static GLOBAL_PUBLIC_BIT_ADDRESS: uintptr_t =
     mmtk::util::metadata::side_metadata::PUBLIC_SIDE_METADATA_ADDR.as_usize();
 

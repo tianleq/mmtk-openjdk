@@ -25,6 +25,7 @@
 #include "precompiled.hpp"
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
+#include "barriers/mmtkSATBBarrier.hpp"
 #include "barriers/mmtkPublicObjectMarkingBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
 #include "mmtkBarrierSetAssembler_x86.hpp"
@@ -35,6 +36,10 @@
 #ifdef COMPILER2
 #include "mmtkBarrierSetC2.hpp"
 #endif
+
+bool mmtk_enable_allocation_fastpath = true;
+bool mmtk_enable_barrier_fastpath = true;
+bool mmtk_enable_reference_load_barrier = true;
 
 MMTkAllocatorOffsets get_tlab_top_and_end_offsets(AllocatorSelector selector) {
   int tlab_top_offset, tlab_end_offset;
@@ -80,6 +85,7 @@ MMTkBarrierBase* get_selected_barrier() {
   const char* barrier = mmtk_active_barrier();
   if (strcmp(barrier, "NoBarrier") == 0) selected_barrier = new MMTkNoBarrier();
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
+  else if (strcmp(barrier, "SATBBarrier") == 0) selected_barrier = new MMTkSATBBarrier();
   else if (strcmp(barrier, "PublicObjectMarkingBarrier") == 0) selected_barrier = new MMTkPublicObjectMarkingBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
@@ -151,6 +157,10 @@ void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_post_call(void* src, void* dst, size_t count) {
   ::mmtk_array_copy_post((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, dst, count);
+}
+
+void MMTkBarrierSetRuntime::load_reference_call(void* ref) {
+  ::mmtk_load_reference((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, ref);
 }
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
