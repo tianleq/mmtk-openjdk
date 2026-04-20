@@ -1,6 +1,6 @@
 #[cfg(feature = "thread_local_gc")]
 use crate::OpenJDKSlot;
-use crate::UPCALLS;
+use crate::{singleton, UPCALLS};
 use crate::{MutatorClosure, OpenJDK};
 use mmtk::util::alloc::AllocationError;
 use mmtk::util::opaque_pointer::*;
@@ -8,9 +8,6 @@ use mmtk::util::opaque_pointer::*;
 use mmtk::vm::ObjectGraphTraversal;
 use mmtk::vm::{Collection, GCThreadContext};
 use mmtk::Mutator;
-
-use crate::{singleton, UPCALLS};
-use crate::{MutatorClosure, OpenJDK};
 
 pub struct VMCollection {}
 

@@ -103,20 +103,20 @@ impl OopIterate for ObjArrayKlass {
     ) {
         let array = unsafe { oop.as_array_oop() };
         #[cfg(feature = "debug_publish_object")]
-        let _source = ObjectReference::from(oop);
+        let source = ObjectReference::from(oop);
         if COMPRESSED {
             for narrow_oop in unsafe { array.data::<NarrowOop, COMPRESSED>(BasicType::T_OBJECT) } {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_slot(narrow_oop.slot().into());
                 #[cfg(feature = "debug_publish_object")]
-                closure.visit_slot(_source, narrow_oop.slot().into());
+                closure.visit_slot(source, narrow_oop.slot().into());
             }
         } else {
             for oop in unsafe { array.data::<Oop, COMPRESSED>(BasicType::T_OBJECT) } {
                 #[cfg(not(feature = "debug_publish_object"))]
                 closure.visit_slot(Address::from_ref(oop as &Oop).into());
                 #[cfg(feature = "debug_publish_object")]
-                closure.visit_slot(_source, Address::from_ref(oop as &Oop).into());
+                closure.visit_slot(source, Address::from_ref(oop as &Oop).into());
             }
         }
     }
@@ -149,7 +149,10 @@ impl OopIterate for InstanceRefKlass {
         // global "reference pending list" or given to the `ReferenceHandler` thread.
         // We treat it as a strong field.
         let discovered_addr: OpenJDKSlot<COMPRESSED> = Self::discovered_address::<COMPRESSED>(oop);
+        #[cfg(not(feature = "debug_publish_object"))]
         closure.visit_slot(discovered_addr);
+        #[cfg(feature = "debug_publish_object")]
+        closure.visit_slot(ObjectReference::from(oop), discovered_addr);
 
         if Self::should_scan_weak_refs::<COMPRESSED>() {
             let reference = ObjectReference::from(oop);
@@ -183,18 +186,12 @@ impl InstanceRefKlass {
         closure: &mut impl SlotVisitor<S<COMPRESSED>>,
     ) {
         #[cfg(feature = "debug_publish_object")]
-        let _source = ObjectReference::from(oop);
+        let source = ObjectReference::from(oop);
         let referent_addr = Self::referent_address::<COMPRESSED>(oop);
         #[cfg(not(feature = "debug_publish_object"))]
         closure.visit_slot(referent_addr);
         #[cfg(feature = "debug_publish_object")]
-        closure.visit_slot(_source, referent_addr);
-
-        // let discovered_addr = Self::discovered_address::<COMPRESSED>(oop);
-        // #[cfg(not(feature = "debug_publish_object"))]
-        // closure.visit_slot(discovered_addr);
-        // #[cfg(feature = "debug_publish_object")]
-        // closure.visit_slot(_source, discovered_addr);
+        closure.visit_slot(source, referent_addr);
     }
 }
 

@@ -37,7 +37,7 @@
 #include "mmtkBarrierSetC2.hpp"
 #endif
 
-bool mmtk_enable_allocation_fastpath = true;
+bool mmtk_enable_allocation_fastpath = false;
 bool mmtk_enable_barrier_fastpath = true;
 bool mmtk_enable_reference_load_barrier = true;
 

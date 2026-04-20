@@ -184,6 +184,10 @@ void MMTkBarrierSetAssembler::generate_c1_object_reference_write_slow_runtime_st
   generate_c1_runtime_stub_general(sasm, "c1_object_reference_write_slow_stub", FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_slow_call), 3);
 }
 
+void MMTkBarrierSetAssembler::generate_c1_object_reference_write_pre_imprecise_runtime_stub(StubAssembler* sasm) {
+  generate_c1_runtime_stub_general(sasm, "c1_object_reference_write_pre_stub", FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), 3);
+}
+
 #undef __
 
 // Generate code stubs

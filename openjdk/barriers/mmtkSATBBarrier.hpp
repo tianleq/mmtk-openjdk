@@ -23,7 +23,7 @@ class MMTkSATBBarrierSetRuntime: public MMTkUnlogBitBarrierSetRuntime {
 public:
   // Interfaces called by `MMTkBarrierSet::AccessBarrier`
   virtual void object_reference_write_pre(oop src, oop* slot, oop target) const override;
-  virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count) const override {
+  virtual void object_reference_array_copy_pre(oop* src, oop* dst, size_t count, oop src_base, oop dst_base) const override {
     if (count == 0) return;
     ::mmtk_array_copy_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, (void*) src, (void*) dst, count);
   }

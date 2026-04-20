@@ -26,9 +26,16 @@ void MMTkBarrierSetC1::generate_c1_runtime_stubs(BufferBlob* buffer_blob) {
   _object_reference_write_pre_c1_runtime_code_blob  = do_code_blob("c1_object_reference_write_pre_stub",  &MMTkBarrierSetAssembler::generate_c1_object_reference_write_pre_runtime_stub);
   _object_reference_write_post_c1_runtime_code_blob = do_code_blob("c1_object_reference_write_post_stub", &MMTkBarrierSetAssembler::generate_c1_object_reference_write_post_runtime_stub);
   _object_reference_write_slow_c1_runtime_code_blob = do_code_blob("c1_object_reference_write_slow_stub", &MMTkBarrierSetAssembler::generate_c1_object_reference_write_slow_runtime_stub);
+  _object_reference_write_pre_imprecise_c1_runtime_code_blob = do_code_blob("c1_object_reference_write_pre_imprecise_stub",  &MMTkBarrierSetAssembler::generate_c1_object_reference_write_pre_imprecise_runtime_stub);
 }
 
 void MMTkC1ReferenceLoadBarrierStub::emit_code(LIR_Assembler* ce) {
   MMTkBarrierSetAssembler* bs = (MMTkBarrierSetAssembler*) BarrierSet::barrier_set()->barrier_set_assembler();
   bs->generate_c1_ref_load_barrier_stub_call(ce, this);
+}
+
+
+void MMTkC1PreBarrierStub::emit_code(LIR_Assembler* ce) {
+  MMTkBarrierSetAssembler* bs = (MMTkBarrierSetAssembler*) BarrierSet::barrier_set()->barrier_set_assembler();
+  bs->generate_c1_pre_write_barrier_stub(ce, this);
 }

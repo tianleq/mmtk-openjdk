@@ -30,18 +30,29 @@ public:
 class MMTkPublicObjectMarkingBarrierSetAssembler: public MMTkBarrierSetAssembler {
 protected:
   virtual void object_reference_write_pre(MacroAssembler* masm, DecoratorSet decorators, Address dst, Register val, Register tmp1, Register tmp2) const override;
-  virtual void generate_c1_write_barrier_runtime_stub(StubAssembler* sasm) const;
+  // virtual void generate_c1_write_barrier_runtime_stub(StubAssembler* sasm) const;
+
 public:
   virtual void oop_arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type, 
                                       Register src_oop, Register dst_oop, Register src, Register dst, Register count) override;
+  virtual void generate_c1_pre_write_barrier_stub(LIR_Assembler* ce, MMTkC1PreBarrierStub* stub) const override;
   virtual bool use_oop_arraycopy_prologue() const override { 
     return true; 
   }
+
+public:
+
+  static void generate_c1_object_reference_write_pre_runtime_stub(StubAssembler* sasm);
+  static void generate_c1_object_reference_write_pre_imprecise_runtime_stub(StubAssembler* sasm);
+
 };
 
 class MMTkPublicObjectMarkingBarrierSetC1: public MMTkBarrierSetC1 {
 protected:
   virtual void object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val) const override;
+
+  /// Generate C1 write barrier slow-call C1-LIR code
+  virtual void generate_c1_runtime_stubs(BufferBlob* buffer_blob) override;
 
   virtual LIR_Opr resolve_address(LIRAccess& access, bool resolve_in_register) override {
     return MMTkBarrierSetC1::resolve_address_in_register(access, resolve_in_register);

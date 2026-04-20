@@ -95,3 +95,6 @@ immix = []
 genimmix = []
 stickyimmix = []
 markcompact = []
+
+
+immortal_as_nonmoving = ["mmtk/immortal_as_nonmoving"]
