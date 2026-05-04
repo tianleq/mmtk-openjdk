@@ -82,7 +82,6 @@ public:
     return _companion_thread;
   }
 
-
   Name kind() const {
     return CollectedHeap::ThirdPartyHeap;
   }

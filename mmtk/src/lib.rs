@@ -76,7 +76,6 @@ pub struct SlotsClosure {
         size: usize,
         cap: usize,
         data: *mut libc::c_void,
-        vm_roots_type: u8,
     ) -> NewBuffer,
     pub data: *const libc::c_void,
 }

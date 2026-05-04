@@ -69,6 +69,9 @@ public:
   static void object_reference_write_post_call(void* src, void* slot, void* target);
   /// Generic slow-path. Called by fast-paths.
   static void object_reference_write_slow_call(void* src, void* slot, void* target);
+  /// Generic slow-path. Called by fast-paths.
+  static void object_reference_write_generic_slow_call(void* src, void* slot, void* target, int semantic);
+  static void object_reference_write_pre_call_imprecise(void* src, void* slot, void* target);
   /// Generic arraycopy pre-barrier. Called by fast-paths.
   // static void object_reference_array_copy_pre_call(void* src, void* dst, size_t count);
   /// Generic arraycopy pre-barrier. Called by fast-paths.
@@ -77,7 +80,7 @@ public:
   static void object_reference_array_copy_post_call(void* src, void* dst, size_t count);
   /// Generic slow-paht. Called by fast-path.
   static void object_reference_array_copy_slow_call(void* src, void* dst, size_t count, void* src_base, void* dst_base);
-
+  static void object_reference_clone_pre_call(void* obj);
   /// Check if the address is a slow-path function.
   virtual bool is_slow_path_call(address call) const {
     return call == CAST_FROM_FN_PTR(address, object_reference_write_pre_call)
@@ -104,6 +107,8 @@ public:
   /// Deoptimization can happen after C2 slowpath allocation, and the newly allocated object can be promoted.
   /// So this callback is requierd for any generational collectors.
   virtual void object_probable_write(oop new_obj) const {};
+  /// Object clone pre-barrier
+  virtual void clone_pre(DecoratorSet decorators, oop value) const {};
 };
 
 class MMTkBarrierC1;
@@ -269,7 +274,7 @@ public:
     }
 
     static void clone_in_heap(oop src, oop dst, size_t size) {
-      // TODO: We don't need clone barriers at the moment.
+      runtime()->clone_pre(decorators, dst);
       Raw::clone(src, dst, size);
     }
   };

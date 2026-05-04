@@ -11,6 +11,9 @@ enum Allocator {
   AllocatorLos = 2,
   AllocatorCode = 3,
   AllocatorReadOnly = 4,
+#if defined(MMTK_ENABLE_THREAD_LOCAL_GC)
+  AllocatorPublic = 7,
+#endif
 };
 
 struct RustDynPtr {
@@ -145,7 +148,15 @@ struct MMTkMutatorContext {
 #endif
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
   size_t local_allocation_size;
+  void *slot_remset;
+  void *object_remset;
+  void *stack_slots;
 #endif
+  size_t allocation_bytes;
+#ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
+  uint8_t state;
+#endif
+
 
   HeapWord* alloc(size_t bytes, Allocator allocator = AllocatorDefault);
 

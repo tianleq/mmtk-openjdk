@@ -84,8 +84,6 @@ void MMTkObjectBarrierSetAssembler::arraycopy_epilogue(MacroAssembler* masm, Dec
 
 #undef __
 
-//////////////////// C1 ////////////////////
-
 #ifdef ASSERT
 #define __ gen->lir(__FILE__, __LINE__)->
 #else

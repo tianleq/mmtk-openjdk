@@ -8,7 +8,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+class JavaThread;
 typedef void* MMTk_Mutator;
 typedef void* MMTk_TraceLocal;
 
@@ -24,6 +24,7 @@ extern const uintptr_t VO_BIT_ADDRESS;
 extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
+extern uint8_t CONCURRENT_MARKING_ACTIVE;
 extern uint8_t CONCURRENT_MARKING_ACTIVE;
 #ifdef MMTK_ENABLE_EXTRA_HEADER
 extern const size_t MMTK_EXTRA_HEADER_BYTES;
@@ -54,6 +55,8 @@ extern void post_alloc(MMTk_Mutator mutator, void* refer,
 /// java.lang.Reference load barrier
 extern void mmtk_load_reference(MMTk_Mutator mutator, void* obj);
 
+extern void mmtk_object_reference_clone_pre(MMTk_Mutator mutator, void* obj);
+
 /// Full pre-barrier
 extern void mmtk_object_reference_write_pre(MMTk_Mutator mutator, void* src, void* slot, void* target);
 
@@ -62,6 +65,10 @@ extern void mmtk_object_reference_write_post(MMTk_Mutator mutator, void* src, vo
 
 /// Generic slow-path
 extern void mmtk_object_reference_write_slow(MMTk_Mutator mutator, void* src, void* slot, void* target);
+
+/// Generic slow-path
+extern void mmtk_object_reference_write_slow_generic(MMTk_Mutator mutator, void* src, void* slot, void* target, int semantic);
+extern void mmtk_object_reference_write_pre_imprecise(MMTk_Mutator mutator, void* src, void* slot, void* target);
 
 /// Full array-copy pre-barrier
 extern void mmtk_array_copy_pre(MMTk_Mutator mutator, void* src, void* dst, size_t count);
@@ -251,15 +258,9 @@ extern void mmtk_request_global_gc(void *tls);
 
 extern bool mmtk_is_object_published(void *object);
 
-#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
-  extern void mmtk_set_public_bit(JavaThread *thread, void *object);
-  extern void mmtk_publish_object(JavaThread* thread, void *object);
-  extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
-#else
-  extern void mmtk_set_public_bit(void *object);
-  extern void mmtk_publish_object(void *object);
-  extern void mmtk_publish_object_with_fence(void *object);
-#endif
+extern void mmtk_set_public_bit(JavaThread *thread, void *object);
+extern void mmtk_publish_object(JavaThread* thread, void *object);
+extern void mmtk_publish_object_with_fence(JavaThread* thread, void *object);
 
 #endif
 

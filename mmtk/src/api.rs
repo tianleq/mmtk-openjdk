@@ -411,6 +411,14 @@ pub extern "C" fn mmtk_load_reference(mutator: *mut libc::c_void, o: ObjectRefer
     with_mutator!(|mutator| mutator.barrier().load_weak_reference(o))
 }
 
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_clone_pre(
+    mutator: *mut libc::c_void,
+    obj: ObjectReference,
+) {
+    with_mutator!(|mutator| mutator.barrier().object_reference_clone_pre(obj))
+}
+
 /// Full pre barrier
 #[no_mangle]
 pub extern "C" fn mmtk_object_reference_write_pre(
@@ -456,6 +464,38 @@ pub extern "C" fn mmtk_object_reference_write_slow(
     })
 }
 
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_write_slow_generic(
+    mutator: *mut libc::c_void,
+    src: ObjectReference,
+    slot: Address,
+    target: NullableObjectReference,
+    semantic: i32,
+) {
+    with_mutator!(|mutator| {
+        mutator.barrier().object_reference_write_slow_generic(
+            src,
+            slot.into(),
+            target.into(),
+            semantic,
+        );
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mmtk_object_reference_write_pre_imprecise(
+    mutator: *mut libc::c_void,
+    src: ObjectReference,
+    slot: Address,
+    target: NullableObjectReference,
+) {
+    with_mutator!(|mutator| {
+        mutator
+            .barrier()
+            .object_reference_write_pre_imprecise(src, slot.into(), target.into());
+    })
+}
+
 fn log_bytes_in_slot() -> usize {
     if crate::use_compressed_oops() {
         OpenJDKSlot::<true>::LOG_BYTES_IN_SLOT
@@ -483,9 +523,6 @@ pub extern "C" fn mmtk_object_array_copy_pre(
             (dst..dst + bytes).into(),
         );
     })
-    // mutator
-    //     .barrier()
-    //     .object_array_copy_pre(src_base, dst_base, src..src + bytes, dst..dst + bytes);
 }
 
 /// Object Array-copy slow-path call
@@ -508,13 +545,6 @@ pub extern "C" fn mmtk_object_array_copy_slow(
             (dst..dst + bytes).into(),
         );
     })
-
-    // mutator.barrier().object_array_copy_slow(
-    //     src_base,
-    //     dst_base,
-    //     src..src + bytes,
-    //     dst..dst + bytes,
-    // );
 }
 
 /// Array-copy pre-barrier
@@ -615,46 +645,25 @@ pub extern "C" fn mmtk_unregister_nmethod(nm: Address) {
     }
 }
 
-#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
-#[no_mangle]
-pub extern "C" fn mmtk_set_public_bit(object: ObjectReference) -> usize {
-    debug_assert!(
-        !crate::use_compressed_oops(),
-        "compressed pointer is not supported"
-    );
-    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object));
-    0
-}
-
-#[cfg(all(feature = "public_bit", not(feature = "debug_thread_local_gc_copying")))]
-#[no_mangle]
-pub extern "C" fn mmtk_publish_object(object: NullableObjectReference) {
-    debug_assert!(
-        !crate::use_compressed_oops(),
-        "compressed pointer is not supported"
-    );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into()));
-}
-
-#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_set_public_bit(tls: VMMutatorThread, object: ObjectReference) -> usize {
     debug_assert!(
-        crate::use_compressed_oops() == false,
+        !crate::use_compressed_oops(),
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(singleton, object, tls));
+    with_singleton!(|singleton| memory_manager::mmtk_set_public_bit(tls, singleton, object));
     0
 }
 
-#[cfg(all(feature = "public_bit", feature = "debug_thread_local_gc_copying"))]
+#[cfg(feature = "public_bit")]
 #[no_mangle]
 pub extern "C" fn mmtk_publish_object(tls: VMMutatorThread, object: NullableObjectReference) {
     debug_assert!(
-        crate::use_compressed_oops() == false,
+        !crate::use_compressed_oops(),
         "compressed pointer is not supported"
     );
-    with_singleton!(|singleton| memory_manager::mmtk_publish_object(singleton, object.into(), tls));
+    with_singleton!(|singleton| memory_manager::mmtk_publish_object(tls, singleton, object.into()));
 }
 
 #[cfg(feature = "public_bit")]

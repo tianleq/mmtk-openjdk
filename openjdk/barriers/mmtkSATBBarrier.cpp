@@ -1,3 +1,4 @@
+#include "c1/c1_IR.hpp"
 #include "precompiled.hpp"
 #include "mmtkSATBBarrier.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
@@ -136,7 +137,7 @@ void MMTkSATBBarrierSetC1::load_at_resolved(LIRAccess& access, LIR_Opr result) {
   }
 }
 
-void MMTkSATBBarrierSetC1::object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val) const {
+void MMTkSATBBarrierSetC1::object_reference_write_pre(LIRAccess& access, LIR_Opr src, LIR_Opr slot, LIR_Opr new_val, CodeEmitInfo *info) const {
   object_reference_write_pre_or_post(access, src, /* pre = */ true);
 }
 

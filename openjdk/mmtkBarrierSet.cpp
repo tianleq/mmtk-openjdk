@@ -22,14 +22,18 @@
  *
  */
 
+#include "mmtk.h"
 #include "precompiled.hpp"
 #include "barriers/mmtkNoBarrier.hpp"
 #include "barriers/mmtkObjectBarrier.hpp"
 #include "barriers/mmtkSATBBarrier.hpp"
 #include "barriers/mmtkPublicObjectMarkingBarrier.hpp"
+#include "barriers/mmtkSATBBarrier.hpp"
 #include "mmtkBarrierSet.hpp"
 #include "mmtkBarrierSetAssembler_x86.hpp"
 #include "runtime/interfaceSupport.inline.hpp"
+#include <cstdint>
+#include <cstdio>
 #ifdef COMPILER1
 #include "mmtkBarrierSetC1.hpp"
 #endif
@@ -87,6 +91,7 @@ MMTkBarrierBase* get_selected_barrier() {
   else if (strcmp(barrier, "ObjectBarrier") == 0) selected_barrier = new MMTkObjectBarrier();
   else if (strcmp(barrier, "SATBBarrier") == 0) selected_barrier = new MMTkSATBBarrier();
   else if (strcmp(barrier, "PublicObjectMarkingBarrier") == 0) selected_barrier = new MMTkPublicObjectMarkingBarrier();
+  else if (strcmp(barrier, "SATBBarrier") == 0) selected_barrier = new MMTkSATBBarrier();
   else guarantee(false, "Unimplemented");
   return selected_barrier;
 }
@@ -139,6 +144,10 @@ bool MMTkBarrierSet::is_slow_path_call(address call) {
   return runtime()->is_slow_path_call(call);
 }
 
+void MMTkBarrierSetRuntime::object_reference_write_pre_call_imprecise(void* src, void* slot, void* target) {
+  ::mmtk_object_reference_write_pre_imprecise((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
+}
+
 void MMTkBarrierSetRuntime::object_reference_write_pre_call(void* src, void* slot, void* target) {
   ::mmtk_object_reference_write_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
 }
@@ -149,6 +158,10 @@ void MMTkBarrierSetRuntime::object_reference_write_post_call(void* src, void* sl
 
 void MMTkBarrierSetRuntime::object_reference_write_slow_call(void* src, void* slot, void* target) {
   ::mmtk_object_reference_write_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target);
+}
+
+void MMTkBarrierSetRuntime::object_reference_write_generic_slow_call(void* src, void* slot, void* target, int semantic) {
+  ::mmtk_object_reference_write_slow_generic((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src, slot, target, semantic);
 }
 
 void MMTkBarrierSetRuntime::object_reference_array_copy_pre_call(void* src, void* dst, size_t count, void* src_base, void* dst_base) {
@@ -167,3 +180,6 @@ void MMTkBarrierSetRuntime::object_reference_array_copy_slow_call(void* src, voi
   ::mmtk_object_array_copy_slow((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, src_base, dst_base, src, dst, count);
 }
 
+void MMTkBarrierSetRuntime::object_reference_clone_pre_call(void* ref) {
+  ::mmtk_object_reference_clone_pre((MMTk_Mutator) &Thread::current()->third_party_heap_mutator, ref);
+}

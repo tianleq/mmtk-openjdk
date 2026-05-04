@@ -6,6 +6,9 @@ use mmtk::util::copy::*;
 use mmtk::util::{Address, ObjectReference};
 use mmtk::vm::*;
 
+#[cfg(feature = "object_pinning")]
+pub(crate) const LOCAL_PINNING_METADATA_BITS_SPEC: VMLocalPinningBitSpec =
+    VMLocalPinningBitSpec::side_after(vm_metadata::MARKING_METADATA_SPEC.as_spec());
 pub struct VMObjectModel<const COMPRESSED: bool> {}
 
 impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<COMPRESSED> {
@@ -17,6 +20,9 @@ impl<const COMPRESSED: bool> ObjectModel<OpenJDK<COMPRESSED>> for VMObjectModel<
         vm_metadata::FORWARDING_BITS_METADATA_SPEC;
     const LOCAL_MARK_BIT_SPEC: VMLocalMarkBitSpec = vm_metadata::MARKING_METADATA_SPEC;
     const LOCAL_LOS_MARK_NURSERY_SPEC: VMLocalLOSMarkNurserySpec = vm_metadata::LOS_METADATA_SPEC;
+
+    #[cfg(feature = "object_pinning")]
+    const LOCAL_PINNING_BIT_SPEC: VMLocalPinningBitSpec = LOCAL_PINNING_METADATA_BITS_SPEC;
 
     const UNIFIED_OBJECT_REFERENCE_ADDRESS: bool = true;
     const OBJECT_REF_OFFSET_LOWER_BOUND: isize = 0;

@@ -420,12 +420,10 @@ public:
 oop MMTkClassAllocator::initialize(HeapWord* mem) const {
   oop result = ClassAllocator::initialize(mem);
 #ifdef MMTK_ENABLE_PUBLIC_BIT
-#if defined(MMTK_ENABLE_DEBUG_THREAD_LOCAL_GC_COPYING)
+
   JavaThread *thread = Thread::current()->is_Java_thread() ? (JavaThread *) Thread::current() : NULL;
   ::mmtk_set_public_bit(thread, result);
-#else
-  ::mmtk_set_public_bit(result);
-#endif
+
   OrderAccess::fence();
 #endif
   return result;
@@ -558,6 +556,8 @@ oop MMTkHeap::class_allocate(Klass* klass, int size, TRAPS) {
   MMTkClassAllocator allocator(klass, size, THREAD);
   return allocator.allocate();
 }
+
+
 /*
  * files with prints currently:
  * collectedHeap.inline.hpp, mmtkHeap.cpp,
