@@ -61,7 +61,7 @@ pub enum BasicType {
 #[repr(C)]
 pub struct Klass {
     vptr: OpaquePointer,
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "openjdk_debug_build")]
     valid: i32,
     pub layout_helper: i32,
     pub id: KlassID,
@@ -155,7 +155,7 @@ pub struct InstanceKlass {
     // #if INCLUDE_JVMTI
     pub jvmti_cached_class_field_map: OpaquePointer, // JvmtiCachedClassFieldMap*
     // #endif
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "openjdk_debug_build")]
     verify_count: i32,
     pub methods: OpaquePointer,                // Array<Method*>*
     pub default_methods: OpaquePointer,        // Array<Method*>*

@@ -122,7 +122,14 @@ ifeq ($(DEBUG_LEVEL), release)
   CARGO_PROFILE = release
   CARGO_PROFILE_FLAG = --release
 else
-  CARGO_PROFILE = debug
+  # CARGO_PROFILE = debug
+  CARGO_PROFILE = release
+  CARGO_PROFILE_FLAG = --release
+  ifndef GC_FEATURES
+    GC_FEATURES=--features openjdk_debug_build
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",openjdk_debug_build"
+  endif
 endif
 
 $(LIB_MMTK): FORCE
