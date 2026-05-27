@@ -77,13 +77,14 @@ void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_imprecise_
 
 void MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_pre(oop src, oop* slot, oop target) const {
   if (mmtk_enable_barrier_fastpath) {
-    intptr_t addr = (intptr_t) (void*) src;
-    uint8_t* meta_addr = (uint8_t*) (PUBLIC_BIT_BASE_ADDRESS + (addr >> 6));
-    intptr_t shift = (addr >> 3) & 0b111;
-    uint8_t byte_val = *meta_addr;
-    if (((byte_val >> shift) & 1) == 1) {
-      MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call((void*) src, (void*) slot, (void*) target);
+    if (__is_public(src)) {
+      // Publication path
+      MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_publication_mid_call((void*) src, (void*) slot, (void*) target);
+    } else {
+      // Remset path
+      MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_remset_mid_call((void*) src, (void*) slot, (void*) target);
     }
+
   } else {
     object_reference_write_pre_call((void*) src, (void*) slot, (void*) target);
   }
