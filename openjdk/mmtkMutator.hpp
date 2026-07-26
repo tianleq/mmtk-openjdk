@@ -70,6 +70,8 @@ struct ImmixAllocator {
   uintptr_t local_free_blocks;
   uintptr_t local_reusable_blocks;
   uint32_t semantic;
+  // uint32_t blocks_acquired_in_local_gc;
+  // uint32_t blocks_freed_in_local_gc;
 #endif
 };
 
@@ -152,7 +154,7 @@ struct MMTkMutatorContext {
   void *object_remset;
   void *stack_slots;
 #endif
-  size_t allocation_bytes;
+  // size_t allocation_bytes;
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC_COPYING
   uint8_t state;
 #endif

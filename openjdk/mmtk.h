@@ -25,7 +25,6 @@ extern const uintptr_t GLOBAL_PUBLIC_BIT_ADDRESS;
 extern const size_t MMTK_MARK_COMPACT_HEADER_RESERVED_IN_BYTES;
 extern const uintptr_t FREE_LIST_ALLOCATOR_SIZE;
 extern uint8_t CONCURRENT_MARKING_ACTIVE;
-extern uint8_t CONCURRENT_MARKING_ACTIVE;
 #ifdef MMTK_ENABLE_EXTRA_HEADER
 extern const size_t MMTK_EXTRA_HEADER_BYTES;
 #endif
@@ -209,6 +208,8 @@ typedef struct {
     size_t (*compute_mutator_mem_layout_checksum) ();
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
     void (*execute_thread_local_gc) (void *tls);
+    void (*do_thread_local_gc_prologue) (void *tls);
+    void (*do_thread_local_gc_epilogue) (void *tls);
 #endif
 } OpenJDK_Upcalls;
 

@@ -63,4 +63,16 @@ impl<const COMPRESSED: bool> ActivePlan<OpenJDK<COMPRESSED>> for VMActivePlan {
             ((*UPCALLS).execute_thread_local_gc)(tls);
         }
     }
+
+    fn do_thread_local_gc_prologue(tls: VMMutatorThread) {
+        unsafe {
+            ((*UPCALLS).do_thread_local_gc_prologue)(tls);
+        }
+    }
+
+    fn do_thread_local_gc_epilogue(tls: VMMutatorThread) {
+        unsafe {
+            ((*UPCALLS).do_thread_local_gc_epilogue)(tls);
+        }
+    }
 }

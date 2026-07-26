@@ -510,7 +510,7 @@ void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* k
     //   Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "mmtk_barrier_call", src, slot, val);
     // } __ end_if();
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "object_reference_write_mid_call", src, slot, val);
+    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "mmtk_barrier_call", src, slot, val);
   } else {
     const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
     Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), "mmtk_barrier_call", src, slot, val);
@@ -657,14 +657,12 @@ void MMTkPublicObjectMarkingBarrierSetC2::clone(GraphKit* kit, Node* src, Node* 
   // pre clone barrier has to be unditional
   // even if the src object is private, it might have public children
   // after cloning, dst will have those public children as well, effectively creating new private --> public 
-  {
-    MMTkIdealKit ideal(kit, true);
-    const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_clone_pre_call), "object_reference_clone_pre_call", dst);
-    // Final sync IdealKit and GraphKit.
-    kit->final_sync(ideal);
-  }
-
+  
+  MMTkIdealKit ideal(kit, true);
+  const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM);
+  Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_clone_pre_call), "mmtk_barrier_call", dst);
+  // Final sync IdealKit and GraphKit.
+  kit->final_sync(ideal);
 
   BarrierSetC2::clone(kit, src, dst, size, is_array);
 }

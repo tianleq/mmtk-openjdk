@@ -384,6 +384,21 @@ static void mmtk_request_end(void *jni_env)
 
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
 
+static void do_thread_local_gc_prologue(void *tls) {
+#if COMPILER2_OR_JVMCI
+  JavaThread *thread = (JavaThread *) tls;
+  thread->ldpt->clear();
+#endif
+}
+
+static void do_thread_local_gc_epilogue(void *tls) {
+#if COMPILER2_OR_JVMCI
+  JavaThread *thread = (JavaThread *) tls;
+  thread->ldpt->update_pointers();
+#endif
+}
+
+
 static void mmtk_thread_local_gc_prologue(Thread *thread) {
   // compiler thread cannot run concurrently with local gc
   {
@@ -395,21 +410,15 @@ static void mmtk_thread_local_gc_prologue(Thread *thread) {
     ++third_party_heap_active_local_gc_count;
   }
 
+  do_thread_local_gc_prologue(thread);
 
-#if COMPILER2_OR_JVMCI
-
-  thread->ldpt->clear();
-#endif
   // In a thread-local gc, only the thread's stack gets scanned
   // so no need to call the following
   // nmethod::oops_do_marking_prologue(); 
 }
 
 static void mmtk_thread_local_gc_epilogue(Thread *thread) {
-#if COMPILER2_OR_JVMCI
-  // DerivedPointerTable::update_pointers();
-  thread->ldpt->update_pointers();
-#endif
+  do_thread_local_gc_epilogue(thread);
   {
     MutexLockerEx locker(third_party_heap_local_gc_active_lock);
     --third_party_heap_active_local_gc_count;
@@ -514,5 +523,7 @@ OpenJDK_Upcalls mmtk_upcalls = {
   compute_mutator_mem_layout_checksum,
 #ifdef MMTK_ENABLE_THREAD_LOCAL_GC
   mmtk_execute_thread_local_gc,
+  do_thread_local_gc_prologue,
+  do_thread_local_gc_epilogue,
 #endif
 };
