@@ -59,6 +59,17 @@ ifeq ($(THREAD_LOCAL_GC), 3)
   endif
 endif
 
+# Histogram of pause times per pause kind (<1ms, 1-10ms, 10-100ms, >=100ms), printed with the MMTk
+# statistics at harness_end. Rust-side only, no C++ define. With the thread-local GC every pause is
+# a full GC, so this is the baseline to read the concurrent public GC's pause table against.
+ifeq ($(PAUSE_TIME_STATS), 1)
+  ifndef GC_FEATURES
+    GC_FEATURES=--features pause_time_stats
+  else
+    GC_FEATURES:=$(strip $(GC_FEATURES))",pause_time_stats"
+  endif
+endif
+
 ifeq ($(EXTRA_HEADER), 1)
   ifndef GC_FEATURES
     GC_FEATURES=--features extra_header
