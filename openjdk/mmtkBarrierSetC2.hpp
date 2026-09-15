@@ -56,6 +56,11 @@ protected:
   virtual Node* store_at_resolved(C2Access& access, C2AccessValue& val) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), val.node());
     Node* store = BarrierSetC2::store_at_resolved(access, val);
+    // A MemBarVolatile here does stop an oop store sinking below a *later* store's barrier
+    // (verified 2026-09-14 on ZipFile$CleanableResource.<init>), but costs a `lock addl` per
+    // reference store.  The fix in use instead gives the barrier call itself full memory effects
+    // (`make_full_memory_barrier_call` in barriers/mmtkPublicObjectMarkingBarrier.cpp), which
+    // orders the same stores with no instruction.
     // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, store);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), val.node());
     return store;
