@@ -485,6 +485,34 @@ void MMTkPublicObjectMarkingBarrierSetC1::object_reference_write_pre(LIRAccess& 
 
 #define __ ideal.
 
+// Emit a barrier runtime call with *full* memory effects, from inside an IdealKit block.
+//
+// IdealKit's `make_leaf_call` wires a call to the raw memory slice only.  For this call that is
+// a lie: the publication walk reads the target's whole subgraph, so every Java field store that
+// precedes the call in program order must have happened by the time it runs.  With raw-only
+// memory a store on another alias slice has no dependence on the call at all, and global code
+// motion is free to sink it below a *later* store's barrier -- which then publishes the source
+// with the field still unwritten, leaving a private object reachable from a public one.  Seen in
+// `ZipFile$CleanableResource.<init>` (2026-09-13, on the concurrent public GC branch, where the
+// marker's private-child check caught it): the `ArrayDeque.elements` store was scheduled after
+// the `inflaterCache` barrier had published the deque, so the array was never published.  The
+// same code shape compiles here, so the same leak exists in this branch; it was what the
+// `-XX:CompileCommand=exclude` list for `java.util.zip.*` and friends papered over.
+//
+// `GraphKit::make_runtime_call` without RC_NARROW_MEM takes the merged memory as the call's
+// input, making every earlier store an input that must precede it, and kills all memory on
+// output.  Only the taken path is constrained; the fast path stays free, and when the test skips
+// nothing is published, so store order is irrelevant there.  RC_LEAF, not RC_NO_FP: the latter
+// makes a CallLeafNoFP, which `is_gc_barrier_node` does not recognise.  The call is named
+// "mmtk_barrier_call" because `MMTkBarrierSetC2::is_gc_barrier_node` matches on that name.
+static void make_full_memory_barrier_call(MMTkIdealKit& ideal, GraphKit* kit, const TypeFunc* tf, address entry,
+                                          Node* parm0, Node* parm1 = NULL, Node* parm2 = NULL) {
+  kit->sync_kit(ideal);
+  kit->make_runtime_call(GraphKit::RC_LEAF | GraphKit::RC_NO_IO, tf, entry, "mmtk_barrier_call",
+                         TypePtr::BOTTOM /* reads and writes all memory */, parm0, parm1, parm2);
+  ideal.sync_kit(kit);
+}
+
 // The only case that the barrier can be skiped is that the target is null
 bool MMTkPublicObjectMarkingBarrierSetC2::can_remove_barrier(GraphKit* kit, PhaseTransform* phase, Node* src, Node* slot, Node* val, bool skip_const_null) const {
   // Skip barrier if the new target is a null pointer.
@@ -516,10 +544,10 @@ void MMTkPublicObjectMarkingBarrierSetC2::object_reference_write_pre(GraphKit* k
   //   Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_publication_mid_call), "mmtk_barrier_call", src, slot, val);
   // } __ end_if();
   const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-  Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), "object_reference_write_mid_call", src, slot, val);
+  make_full_memory_barrier_call(ideal, kit, tf, FN_ADDR(MMTkPublicObjectMarkingBarrierSetRuntime::object_reference_write_mid_call), src, slot, val);
 #else
   const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-  Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), "mmtk_barrier_call", src, slot, val);
+  make_full_memory_barrier_call(ideal, kit, tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_write_pre_call), src, slot, val);
 #endif
 
   kit->final_sync(ideal); // Final sync IdealKit and GraphKit.
@@ -660,17 +688,20 @@ Node* MMTkPublicObjectMarkingBarrierSetC2::load_at_resolved(C2Access& access, co
 }
 
 void MMTkPublicObjectMarkingBarrierSetC2::clone(GraphKit* kit, Node* src, Node* dst, Node* size, bool is_array) const {
-  // pre clone barrier has to be unditional
-  // even if the src object is private, it might have public children
-  // after cloning, dst will have those public children as well, effectively creating new private --> public 
+  // The clone pre-barrier is unconditional: even if `src` is private it may have public children,
+  // and after the raw copy `dst` holds the same references, so every one of its slots is a new
+  // private --> public edge that no store barrier saw.  Same as the runtime path
+  // (`MMTkPublicObjectMarkingBarrierSetRuntime::clone_pre`), which also passes `dst` alone:
+  // `object_reference_clone_pre_call(void* obj)` takes one argument, so the call type has one
+  // oop parameter (the earlier three-parameter type did not match the callee).  Emitted with
+  // full memory effects like the write barrier, so it is a "mmtk_barrier_call" to
+  // `is_gc_barrier_node` and keeps its place relative to the surrounding stores and the copy.
   {
     MMTkIdealKit ideal(kit, true);
-    const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM, TypeOopPtr::BOTTOM);
-    Node* x = __ make_leaf_call(tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_clone_pre_call), "object_reference_clone_pre_call", dst);
-    // Final sync IdealKit and GraphKit.
-    kit->final_sync(ideal);
+    const TypeFunc* tf = __ func_type(TypeOopPtr::BOTTOM);
+    make_full_memory_barrier_call(ideal, kit, tf, FN_ADDR(MMTkBarrierSetRuntime::object_reference_clone_pre_call), dst);
+    kit->final_sync(ideal); // Final sync IdealKit and GraphKit.
   }
-
 
   BarrierSetC2::clone(kit, src, dst, size, is_array);
 }
