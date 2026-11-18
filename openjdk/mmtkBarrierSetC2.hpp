@@ -62,6 +62,9 @@ protected:
   }
   virtual Node* atomic_cmpxchg_val_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
+    // The pre-barrier may emit a call that defines all memory; the access captured its memory
+    // state before that call (C2AccessFence), so re-read it or the LoadStore bypasses the call.
+    access.set_memory();
     Node* result = BarrierSetC2::atomic_cmpxchg_val_at_resolved(access, expected_val, new_val, value_type);
     //  if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, result);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
@@ -69,6 +72,9 @@ protected:
   }
   virtual Node* atomic_cmpxchg_bool_at_resolved(C2AtomicAccess& access, Node* expected_val, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
+    // The pre-barrier may emit a call that defines all memory; the access captured its memory
+    // state before that call (C2AccessFence), so re-read it or the LoadStore bypasses the call.
+    access.set_memory();
     Node* load_store = BarrierSetC2::atomic_cmpxchg_bool_at_resolved(access, expected_val, new_val, value_type);
     // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, load_store);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
@@ -76,6 +82,9 @@ protected:
   }
   virtual Node* atomic_xchg_at_resolved(C2AtomicAccess& access, Node* new_val, const Type* value_type) const {
     if (access.is_oop()) object_reference_write_pre(access.kit(), access.base(), access.addr().node(), new_val);
+    // The pre-barrier may emit a call that defines all memory; the access captured its memory
+    // state before that call (C2AccessFence), so re-read it or the LoadStore bypasses the call.
+    access.set_memory();
     Node* result = BarrierSetC2::atomic_xchg_at_resolved(access, new_val, value_type);
     // if (access.is_oop()) access.kit()->insert_mem_bar(Op_MemBarVolatile, result);
     if (access.is_oop()) object_reference_write_post(access.kit(), access.base(), access.addr().node(), new_val);
